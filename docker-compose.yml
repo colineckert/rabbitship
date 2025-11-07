@@ -1,0 +1,28 @@
+services:
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: rabbitmq
+    hostname: rabbitmq
+    ports:
+      - "5672:5672" # AMQP
+      - "15672:15672" # Web UI
+    healthcheck:
+      test: rabbitmqctl status
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  app:
+    build: .
+    container_name: rabbitship
+    ports:
+      - "3000:3000" # HTTP
+      - "8080:8080" # WebSocket
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+      - NODE_ENV=production
+    restart: unless-stopped
