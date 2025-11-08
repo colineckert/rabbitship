@@ -1,42 +1,46 @@
 import { getRabbitMQConnection } from "./connection";
 import { encode } from "@msgpack/msgpack";
+import { EXCHANGE, ROUTING_KEY } from "./constants";
 
 export async function publishTest() {
   try {
     const conn = await getRabbitMQConnection();
     const channel = await conn.createConfirmChannel();
 
-    await channel.assertExchange("game.events", "topic", { durable: true });
-
     const payload = encode({
-      event: "test_event",
-      timestamp: Date.now(),
+      type: "test",
       message: "RabbitShip is ALIVE!",
-      from: "publishTest function",
-      docker: "🐇🚢",
+      timestamp: Date.now(),
+      from: "publish.ts",
+      version: "1.0",
     });
 
     return new Promise<void>((resolve, reject) => {
-      channel.publish(
-        "game.events",
-        "test.rabbitship",
+      channel!.publish(
+        EXCHANGE.GAME_EVENTS,
+        ROUTING_KEY.TEST_PUBLISH,
         Buffer.from(payload),
         {
-          contentType: "application/x-msgpack",
           persistent: true,
           messageId: crypto.randomUUID(),
           timestamp: Math.floor(Date.now() / 1000),
+          contentType: "application/msgpack",
+          contentEncoding: "binary",
         },
-        (err) => {
-          if (err !== null) {
-            reject(new Error("Message was NACKed by the broker"));
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (err: any) => {
+          if (err) {
+            console.error("Publish failed:", err);
+            reject(err);
           } else {
+            console.log(`PUBLISHED → ${ROUTING_KEY.TEST_PUBLISH}`);
             resolve();
           }
         },
       );
     });
-  } catch (err) {
-    console.error("Error in publishTest:", err);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (err: any) {
+    console.error("publishTest failed:", err.message);
   }
 }
