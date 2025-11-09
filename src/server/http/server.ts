@@ -1,12 +1,25 @@
 import { serve } from "bun";
 import { WebSocketServer } from "ws";
-import { getRabbitMQConnection } from "../rabbit/connection";
+import { getConnection } from "../rabbit/connection";
 import { publishTest } from "../rabbit/publish";
+import { startConsumers, stopConsumers } from "../rabbit/consume";
 import { QUEUE } from "../rabbit/constants";
-import "../rabbit/setup";
+import { initTopology } from "../rabbit/setup";
 
 const HTTP_PORT = 3000;
 const WS_PORT = 8080;
+
+async function startup() {
+  console.log("Starting RabbitShip server...");
+  await getConnection();
+  await initTopology();
+  await startConsumers();
+}
+
+startup().catch((err) => {
+  console.error("Server startup failed:", err);
+  process.exit(1);
+});
 
 serve({
   port: HTTP_PORT,
@@ -19,7 +32,7 @@ serve({
 
     if (url.pathname === "/debug/rabbitmq") {
       try {
-        await getRabbitMQConnection();
+        await getConnection();
         return new Response("RabbitMQ: Connected", { status: 200 });
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (err: any) {
@@ -35,7 +48,7 @@ serve({
     }
 
     if (url.pathname === "/debug/clear") {
-      const conn = await getRabbitMQConnection();
+      const conn = await getConnection();
       const ch = await conn.createChannel();
       await ch.purgeQueue(QUEUE.DEBUG);
       await ch.close();
@@ -60,3 +73,11 @@ wss.on("connection", (ws) => {
   console.log("WS client connected");
   ws.send(JSON.stringify({ type: "welcome", message: "Connected!" }));
 });
+
+async function shutdown() {
+  console.log("Shutting down RabbitShip server...");
+  await stopConsumers();
+}
+
+process.on("SIGINT", shutdown);
+process.on("SIGTERM", shutdown);

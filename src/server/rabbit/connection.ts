@@ -6,7 +6,7 @@ const RABBITMQ_URL =
 let conn: amqp.ChannelModel | null = null;
 let isConnecting = false;
 
-export async function getRabbitMQConnection(): Promise<amqp.ChannelModel> {
+export async function getConnection(): Promise<amqp.ChannelModel> {
   if (conn) return conn;
 
   if (isConnecting) {
@@ -18,7 +18,7 @@ export async function getRabbitMQConnection(): Promise<amqp.ChannelModel> {
         }
       }, 100);
     });
-    return getRabbitMQConnection();
+    return getConnection();
   }
 
   isConnecting = true;

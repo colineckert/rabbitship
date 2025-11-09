@@ -1,9 +1,9 @@
-import { getRabbitMQConnection } from "./connection";
+import { getConnection } from "./connection";
 import { EXCHANGE, QUEUE, ROUTING_KEY } from "./constants";
 
 export async function initTopology() {
   try {
-    const conn = await getRabbitMQConnection();
+    const conn = await getConnection();
     const ch = await conn.createChannel();
 
     // Exchanges
@@ -53,5 +53,3 @@ export async function initTopology() {
     throw err;
   }
 }
-
-initTopology();

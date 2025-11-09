@@ -1,10 +1,10 @@
-import { getRabbitMQConnection } from "./connection";
+import { getConnection } from "./connection";
 import { encode } from "@msgpack/msgpack";
 import { EXCHANGE, ROUTING_KEY } from "./constants";
 
 export async function publishTest() {
   try {
-    const conn = await getRabbitMQConnection();
+    const conn = await getConnection();
     const channel = await conn.createConfirmChannel();
 
     const payload = encode({
@@ -16,7 +16,7 @@ export async function publishTest() {
     });
 
     return new Promise<void>((resolve, reject) => {
-      channel!.publish(
+      channel.publish(
         EXCHANGE.GAME_EVENTS,
         ROUTING_KEY.TEST_PUBLISH,
         Buffer.from(payload),
