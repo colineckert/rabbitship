@@ -22,7 +22,15 @@
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
+    "noUncheckedSideEffectImports": true,
+
+    /* PATH ALIASES */
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@/client/*": ["src/client/*"]
+    }
   },
-  "include": ["src"]
+  "include": ["src/client/**/*.ts", "src/client/**/*.tsx"],
+  "exclude": ["src/server/**"]
 }

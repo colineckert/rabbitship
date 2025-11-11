@@ -20,7 +20,17 @@
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
+    "noUncheckedSideEffectImports": true,
+
+    /* SAME PATH ALIASES */
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@/game/*": ["src/server/game/*"],
+      "@/rabbit/*": ["src/server/rabbit/*"],
+      "@/http/*": ["src/server/http/*"]
+    }
   },
-  "include": ["vite.config.ts"]
+  "include": [ "vite.config.ts", "src/server/**/*.ts" ],
+  "exclude": [ "node_modules", "src/client/**" ]
 }
