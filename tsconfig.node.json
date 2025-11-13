@@ -22,15 +22,15 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
 
-    /* SAME PATH ALIASES */
+    /* PATH ALIASES */
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"],
-      "@/game/*": ["src/server/game/*"],
+      "@/game/*": ["src/game/*"],
       "@/rabbit/*": ["src/server/rabbit/*"],
       "@/http/*": ["src/server/http/*"]
     }
   },
-  "include": [ "vite.config.ts", "src/server/**/*.ts" ],
-  "exclude": [ "node_modules", "src/client/**" ]
+  "include": ["vite.config.ts", "src/server/**/*.ts", "src/game/**/*.ts"],
+  "exclude": ["node_modules", "src/client/**"]
 }

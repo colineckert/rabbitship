@@ -28,9 +28,15 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"],
-      "@/client/*": ["src/client/*"]
+      "@/client/*": ["src/client/*"],
+      "@/game/*": ["src/game/*"]
     }
   },
-  "include": ["src/client/**/*.ts", "src/client/**/*.tsx"],
+  "include": [
+    "src/client/**/*.ts",
+    "src/client/**/*.tsx",
+    "src/game/**/*.ts",
+    "src/game/**/*.tsx"
+  ],
   "exclude": ["src/server/**"]
 }

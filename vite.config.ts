@@ -8,7 +8,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
-      "@/game": path.resolve(__dirname, "./src/server/game"),
+      "@/game": path.resolve(__dirname, "./src/game"),
       "@/rabbit": path.resolve(__dirname, "./src/server/rabbit"),
       "@/http": path.resolve(__dirname, "./src/server/http"),
       "@/ws": path.resolve(__dirname, "./src/server/ws"),
