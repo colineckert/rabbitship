@@ -1,5 +1,7 @@
 import type { GameState, MoveEvent, MoveResultEvent } from "@/game/types";
 
+// active game and user fires a shot;
+// determine if hit or miss and update game state
 export function handleMove(
   state: GameState,
   move: MoveEvent,

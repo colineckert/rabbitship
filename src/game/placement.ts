@@ -1,33 +1,47 @@
-import { type Cell, ShipLengths, type Direction, BOARD_SIZE } from "./types";
+import {
+  type Cell,
+  ShipLengths,
+  ShipLengthMap,
+  type Direction,
+  BOARD_SIZE,
+  type GameState,
+  type PlaceShipEvent,
+} from "./types";
 
-export function createEmptyBoard(): Cell[][] {
-  return Array(BOARD_SIZE)
-    .fill(null)
-    .map(() => Array(BOARD_SIZE).fill("empty"));
-}
+// update game state when user places ship
+export function handlePlaceShip(
+  gs: GameState,
+  placement: PlaceShipEvent,
+): boolean {
+  console.log();
+  console.log("==== Ship Placement Detected ====");
 
-export function printBoard(grid: Cell[][]): void {
-  console.log("  0 1 2 3 4 5 6 7 8 9");
-  for (let y = 0; y < BOARD_SIZE; y++) {
-    let row = `${y} `;
-    for (let x = 0; x < BOARD_SIZE; x++) {
-      switch (grid[y][x]) {
-        case "empty":
-          row += ". ";
-          break;
-        case "ship":
-          row += "S ";
-          break;
-        case "hit":
-          row += "X ";
-          break;
-        case "miss":
-          row += "O ";
-          break;
-      }
-    }
-    console.log(row);
+  const shipLength = ShipLengthMap[placement.ship];
+
+  console.log(
+    `${placement.player} places ${placement.ship} of length ${shipLength} at coordinates [${placement.x}, ${placement.y}] facing ${placement.dir}`,
+  );
+
+  const playerState = placement.player === "p1" ? gs.p1 : gs.p2;
+  const success = tryPlaceShip(
+    playerState.grid,
+    placement.x,
+    placement.y,
+    shipLength,
+    placement.dir,
+  );
+
+  if (!success) {
+    console.log("Ship placement failed due to invalid position or overlap.");
+    throw new Error("Invalid ship placement");
   }
+
+  playerState.shipsPlaced += 1;
+  console.log(
+    `${placement.player} successfully placed ${placement.ship}. Total ships placed: ${playerState.shipsPlaced}`,
+  );
+
+  return success;
 }
 
 export function tryPlaceShip(

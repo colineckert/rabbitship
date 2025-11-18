@@ -1,5 +1,6 @@
 import type { GameState, GamePhase, GameMode } from "./types";
-import { createEmptyBoard, placeShipsRandomly } from "./board";
+import { placeShipsRandomly } from "./placement";
+import { createEmptyBoard } from "./board";
 
 export class GameEngine {
   private games: Map<string, GameState>;

@@ -16,6 +16,14 @@ export interface Ships {
   destroyer: 2; // Destroyer/Submarine
 }
 
+export const ShipLengthMap: Ships = {
+  carrier: 5,
+  battleship: 4,
+  cruiser1: 3,
+  cruiser2: 3,
+  destroyer: 2,
+};
+
 export const ShipLengths = [5, 4, 3, 3, 2]; // Total: 17 squares
 
 export type Direction = "h" | "v";
