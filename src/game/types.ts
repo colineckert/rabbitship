@@ -4,19 +4,16 @@ export type GameMode = "ai" | "multiplayer";
 
 export type GamePhase = "setup" | "play" | "over";
 
-export type Cell = "empty" | "ship" | "hit" | "miss";
-
 export const BOARD_SIZE = 10;
 
-export interface Ships {
-  carrier: 5; // Aircraft Carrier
-  battleship: 4; // Battleship
-  cruiser1: 3; // Cruiser
-  cruiser2: 3; // Cruiser
-  destroyer: 2; // Destroyer/Submarine
-}
+export type ShipKey =
+  | "carrier"
+  | "battleship"
+  | "cruiser1"
+  | "cruiser2"
+  | "destroyer";
 
-export const ShipLengthMap: Ships = {
+export const ShipLengthMap: Record<ShipKey, number> = {
   carrier: 5,
   battleship: 4,
   cruiser1: 3,
@@ -27,6 +24,8 @@ export const ShipLengthMap: Ships = {
 export const ShipLengths = [5, 4, 3, 3, 2]; // Total: 17 squares
 
 export type Direction = "h" | "v";
+
+export type Cell = "empty" | "miss" | `${ShipKey}-ship` | `${ShipKey}-hit`;
 
 export interface ShipPlacement {
   x: number;
@@ -57,6 +56,7 @@ export interface GameState {
     shots: Set<string>; // Hits/misses on P2 (for P1 view)
     shipsPlaced: number; // 0-5 (setup progress)
     shipsSunk: number; // 0-5 (win check)
+    shipHits: Partial<Record<ShipKey, number>>; // Track hits per ship
   };
 
   // Player 2: Own ships + opponent's shots
@@ -65,6 +65,7 @@ export interface GameState {
     shots: Set<string>; // Hits/misses on P1 (for P2 view)
     shipsPlaced: number; // 0-5
     shipsSunk: number; // 0-5
+    shipHits: Partial<Record<ShipKey, number>>; // Track hits per ship
   };
 
   // Stats
@@ -113,7 +114,7 @@ export interface JoinEvent {
 export interface PlaceShipEvent {
   type: "place-ship";
   player: PlayerId;
-  ship: keyof Ships; // 'carrier' | 'battleship' | ...
+  ship: ShipKey; // 'carrier' | 'battleship' | ...
   x: number;
   y: number;
   dir: Direction;
@@ -131,7 +132,7 @@ export interface MoveResultEvent {
   x: number;
   y: number;
   hit: boolean;
-  sunkShip?: keyof Ships;
+  sunkShip?: ShipKey;
   nextTurn: PlayerId;
   p1Board: string[][]; // Opponent view for P1
   p2Board: string[][]; // Opponent view for P2

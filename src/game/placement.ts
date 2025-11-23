@@ -1,11 +1,11 @@
 import {
   type Cell,
-  ShipLengths,
   ShipLengthMap,
   type Direction,
   BOARD_SIZE,
   type GameState,
   type PlaceShipEvent,
+  type ShipKey,
 } from "./types";
 
 // update game state when user places ship
@@ -27,7 +27,7 @@ export function handlePlaceShip(
     playerState.grid,
     placement.x,
     placement.y,
-    shipLength,
+    placement.ship,
     placement.dir,
   );
 
@@ -48,9 +48,11 @@ export function tryPlaceShip(
   grid: Cell[][],
   x: number,
   y: number,
-  length: number,
+  ship: ShipKey,
   dir: Direction,
 ): boolean {
+  const length = ShipLengthMap[ship];
+
   // Check if ship can be placed
   if (x < 0 || x >= BOARD_SIZE || y < 0 || y >= BOARD_SIZE) return false;
   if (dir === "h" && x + length > BOARD_SIZE) return false;
@@ -66,21 +68,21 @@ export function tryPlaceShip(
   for (let i = 0; i < length; i++) {
     const cx = dir === "h" ? x + i : x;
     const cy = dir === "v" ? y + i : y;
-    grid[cy][cx] = "ship";
+    grid[cy][cx] = `${ship}-ship`;
   }
 
   return true;
 }
 
 export function placeShipsRandomly(grid: Cell[][]): void {
-  for (const length of ShipLengths) {
+  for (const ship in ShipLengthMap) {
     let placed = false;
     let attempts = 0;
     while (!placed && attempts < 100) {
       const dir: Direction = Math.random() < 0.5 ? "h" : "v";
       const x = Math.floor(Math.random() * BOARD_SIZE);
       const y = Math.floor(Math.random() * BOARD_SIZE);
-      placed = tryPlaceShip(grid, x, y, length, dir);
+      placed = tryPlaceShip(grid, x, y, ship as ShipKey, dir);
       attempts++;
     }
     if (!placed) {

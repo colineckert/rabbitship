@@ -24,12 +24,14 @@ export class GameEngine {
         shots: new Set(),
         shipsPlaced: 0,
         shipsSunk: 0,
+        shipHits: {},
       },
       p2: {
         grid: createEmptyBoard(),
         shots: new Set(),
         shipsPlaced: 0,
         shipsSunk: 0,
+        shipHits: {},
       },
     };
 
