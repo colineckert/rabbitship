@@ -1,6 +1,6 @@
-import { getConnection } from "./connection";
 import { decode } from "@msgpack/msgpack";
-import amqp from "amqplib";
+import type amqp from "amqplib";
+import { getConnection } from "./connection";
 import { QUEUE } from "./constants";
 
 type Unsubscribe = () => Promise<void>;

@@ -1,9 +1,9 @@
 import { serve } from "bun";
 import { WebSocketServer } from "ws";
 import { getConnection } from "../rabbit/connection";
-import { publishTest } from "../rabbit/publish";
-import { startConsumers, stopConsumers } from "../rabbit/consume";
 import { QUEUE } from "../rabbit/constants";
+import { startConsumers, stopConsumers } from "../rabbit/consume";
+import { publishTest } from "../rabbit/publish";
 import { initTopology } from "../rabbit/setup";
 
 const HTTP_PORT = 3000;
@@ -57,7 +57,7 @@ serve({
 
     // Serve React
     const filePath = url.pathname === "/" ? "/index.html" : url.pathname;
-    const file = Bun.file("./dist" + filePath);
+    const file = Bun.file(`./dist${filePath}`);
     return new Response(
       (await file.exists()) ? file : Bun.file("./dist/index.html"),
     );

@@ -1,6 +1,7 @@
-import { getConnection } from "./connection";
 import { encode } from "@msgpack/msgpack";
+import { getConnection } from "./connection";
 import { EXCHANGE, ROUTING_KEY } from "./constants";
+import type { ConfirmChannel } from "amqplib";
 
 export async function publishTest() {
   try {
@@ -43,4 +44,29 @@ export async function publishTest() {
   } catch (err: any) {
     console.error("publishTest failed:", err.message);
   }
+}
+
+export function publishMsgPack<T>(
+  ch: ConfirmChannel,
+  exchange: string,
+  routingKey: string,
+  value: T,
+): Promise<void> {
+  const buffer = Buffer.from(encode(value));
+
+  return new Promise((resolve, reject) => {
+    ch.publish(
+      exchange,
+      routingKey,
+      buffer,
+      { contentType: "application/x-msgpack" },
+      (err) => {
+        if (err !== null) {
+          reject(new Error("Message was NACKed by the broker"));
+        } else {
+          resolve();
+        }
+      },
+    );
+  });
 }

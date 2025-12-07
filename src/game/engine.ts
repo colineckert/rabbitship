@@ -1,6 +1,6 @@
-import type { GameState, GamePhase, GameMode } from "./types";
-import { placeShipsRandomly } from "./placement";
 import { createEmptyBoard } from "./board";
+import { placeShipsRandomly } from "./placement";
+import type { GameMode, GamePhase, GameState } from "./types";
 
 export class GameEngine {
   private games: Map<string, GameState>;
@@ -43,5 +43,13 @@ export class GameEngine {
     // Store the game state
     this.games.set(id, state);
     return state;
+  }
+
+  getGame(id: string): GameState | null {
+    return this.games.get(id) || null;
+  }
+
+  deleteGame(id: string): void {
+    this.games.delete(id);
   }
 }

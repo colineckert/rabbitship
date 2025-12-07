@@ -1,10 +1,10 @@
 import {
-  ShipLengthMap,
   type GameState,
   type MoveEvent,
   type MoveResultEvent,
   type PlayerId,
   type ShipKey,
+  ShipLengthMap,
 } from "@/game/types";
 
 function isValidCoord(x: number, y: number): boolean {
@@ -64,6 +64,7 @@ function resolveShot(
 
 // active game and user fires a shot;
 // determine if hit or miss and update game state
+// TODO: make use of function when integrating move handling
 export function handleMove(
   state: GameState,
   move: MoveEvent,
@@ -93,6 +94,8 @@ export function handleMove(
     p2Board: state.p2.grid,
     nextTurn: move.player === "p1" ? "p2" : "p1",
   };
+
+  // TODO: publish move result event to message broker
 
   return moveResult;
 }
