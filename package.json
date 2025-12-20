@@ -13,9 +13,11 @@
   },
   "dependencies": {
     "@msgpack/msgpack": "^3.1.2",
+    "@tailwindcss/vite": "^4.1.18",
     "amqplib": "^0.10.9",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
+    "tailwindcss": "^4.1.18",
     "ws": "^8.18.3",
     "zod": "^4.1.12"
   },

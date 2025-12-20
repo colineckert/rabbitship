@@ -1,7 +1,7 @@
 import { encode } from "@msgpack/msgpack";
+import type { ConfirmChannel } from "amqplib";
 import { getConnection } from "./connection";
 import { EXCHANGE, ROUTING_KEY } from "./constants";
-import type { ConfirmChannel } from "amqplib";
 
 export async function publishTest() {
   try {
