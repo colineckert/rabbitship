@@ -15,10 +15,18 @@ export function printBoard(grid: Cell[][]): void {
         case "empty":
           row += ". ";
           break;
-        case "ship":
+        case "carrier-ship":
+        case "battleship-ship":
+        case "cruiser1-ship":
+        case "cruiser2-ship":
+        case "destroyer-ship":
           row += "S ";
           break;
-        case "hit":
+        case "carrier-hit":
+        case "battleship-hit":
+        case "cruiser1-hit":
+        case "cruiser2-hit":
+        case "destroyer-hit":
           row += "X ";
           break;
         case "miss":
