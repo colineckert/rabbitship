@@ -1,17 +1,17 @@
-export type PlayerId = "p1" | "p2" | "ai";
+export type PlayerId = 'p1' | 'p2' | 'ai';
 
-export type GameMode = "ai" | "multiplayer";
+export type GameMode = 'ai' | 'multiplayer';
 
-export type GamePhase = "setup" | "play" | "over";
+export type GamePhase = 'setup' | 'play' | 'over';
 
 export const BOARD_SIZE = 10;
 
 export type ShipKey =
-  | "carrier"
-  | "battleship"
-  | "cruiser1"
-  | "cruiser2"
-  | "destroyer";
+  | 'carrier'
+  | 'battleship'
+  | 'cruiser1'
+  | 'cruiser2'
+  | 'destroyer';
 
 export const ShipLengthMap: Record<ShipKey, number> = {
   carrier: 5,
@@ -23,9 +23,9 @@ export const ShipLengthMap: Record<ShipKey, number> = {
 
 export const ShipLengths = [5, 4, 3, 3, 2]; // Total: 17 squares
 
-export type Direction = "h" | "v";
+export type Direction = 'h' | 'v';
 
-export type Cell = "empty" | "miss" | `${ShipKey}-ship` | `${ShipKey}-hit`;
+export type Cell = 'empty' | 'miss' | `${ShipKey}-ship` | `${ShipKey}-hit`;
 
 export interface ShipPlacement {
   x: number;
@@ -44,7 +44,7 @@ export interface GameState {
   // Players (wsId for multiplayer, 'ai' for AI)
   players: {
     p1: string | null; // wsId or null (not joined)
-    p2: string | null | "ai";
+    p2: string | null | 'ai';
   };
 
   // Current turn (only during 'play')
@@ -76,14 +76,14 @@ export interface GameState {
 // Helper: Opponent view (hide ships)
 export function serializeOpponentBoard(
   grid: Cell[][],
-  opponentShots: Set<string>,
+  opponentShots: Set<string>
 ): string[][] {
   return grid.map((row, y) =>
     row.map((_, x) => {
       const coord = `${x},${y}`;
       if (opponentShots.has(coord)) return grid[y][x]; // hit/miss
-      return "empty"; // Hide ships
-    }),
+      return 'empty'; // Hide ships
+    })
   );
 }
 
@@ -94,25 +94,25 @@ export function isValidCoord(x: number, y: number): boolean {
 
 export function gameOver(state: GameState): boolean {
   return (
-    state.phase === "over" ||
+    state.phase === 'over' ||
     state.p1.shipsSunk === 5 ||
     state.p2.shipsSunk === 5
   );
 }
 
 export function isPlayersTurn(state: GameState, player: PlayerId): boolean {
-  return state.phase === "play" && state.turn === player;
+  return state.phase === 'play' && state.turn === player;
 }
 
 // Event payloads (for pub/sub)
 export interface JoinEvent {
-  type: "join";
+  type: 'join';
   player: PlayerId;
   wsId: string;
 }
 
 export interface PlaceShipEvent {
-  type: "place-ship";
+  type: 'place-ship';
   player: PlayerId;
   ship: ShipKey; // 'carrier' | 'battleship' | ...
   x: number;
@@ -121,14 +121,14 @@ export interface PlaceShipEvent {
 }
 
 export interface MoveEvent {
-  type: "move";
+  type: 'move';
   player: PlayerId;
   x: number;
   y: number;
 }
 
 export interface MoveResultEvent {
-  type: "move-result";
+  type: 'move-result';
   x: number;
   y: number;
   hit: boolean;
@@ -140,3 +140,12 @@ export interface MoveResultEvent {
 }
 
 export type GameEvent = JoinEvent | PlaceShipEvent | MoveEvent;
+
+export const EVENT_TYPE = {
+  JOIN: 'join',
+  PLACE_SHIP: 'place-ship',
+  MOVE: 'move',
+  MOVE_RESULT: 'move-result',
+} as const;
+
+export type EventType = (typeof EVENT_TYPE)[keyof typeof EVENT_TYPE];
