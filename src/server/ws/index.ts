@@ -75,7 +75,7 @@ const handlers: Record<
           ts: Date.now(),
         }
       );
-      ws.send(JSON.stringify({ ok: true }));
+      ws.send(JSON.stringify({ ok: true, queued: true }));
     } catch (err) {
       console.error('WS publish error:', err);
       ws.send(JSON.stringify({ ok: false, error: String(err) }));
@@ -88,12 +88,8 @@ export async function startWsServer(port = 8080) {
   wss = new WebSocketServer({ port });
 
   wss.on('connection', (ws: WebSocketWithId) => {
-    try {
-      // assign an id if not present (simple fallback)
-      if (!ws.id)
-        ws.id = `${Date.now()}-${Math.floor(Math.random() * 1000000)}`;
-    } catch {
-      // ignore
+    if (!ws.id) {
+      ws.id = `${Date.now()}-${Math.floor(Math.random() * 1000000)}`;
     }
 
     console.log('WS client connected');
