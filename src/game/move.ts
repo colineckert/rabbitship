@@ -85,6 +85,7 @@ export function handleMove(
   const shotResult = resolveShot(state, move.player, move.x, move.y);
 
   const moveResult: MoveResultEvent = {
+    gameId: move.gameId,
     type: EVENT_TYPE.MOVE_RESULT,
     x: move.x,
     y: move.y,

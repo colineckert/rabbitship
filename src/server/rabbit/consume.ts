@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { decode } from '@msgpack/msgpack';
 import type amqp from 'amqplib';
 import { getConnection } from './connection';
