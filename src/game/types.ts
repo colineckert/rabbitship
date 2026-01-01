@@ -109,9 +109,11 @@ export interface JoinEvent {
   type: 'join';
   player: PlayerId;
   wsId: string;
+  gameId: string;
 }
 
 export interface PlaceShipEvent {
+  gameId: string;
   type: 'place-ship';
   player: PlayerId;
   ship: ShipKey; // 'carrier' | 'battleship' | ...
@@ -121,6 +123,7 @@ export interface PlaceShipEvent {
 }
 
 export interface MoveEvent {
+  gameId: string;
   type: 'move';
   player: PlayerId;
   x: number;
@@ -128,6 +131,7 @@ export interface MoveEvent {
 }
 
 export interface MoveResultEvent {
+  gameId: string;
   type: 'move-result';
   x: number;
   y: number;
