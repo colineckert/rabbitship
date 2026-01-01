@@ -1,58 +1,63 @@
-import { decode } from "@msgpack/msgpack";
-import type amqp from "amqplib";
-import { getConnection } from "./connection";
-import { QUEUE } from "./constants";
+import { decode } from '@msgpack/msgpack';
+import type amqp from 'amqplib';
+import { getConnection } from './connection';
+import { QUEUE } from './constants';
+import { EVENT_TYPE, type MoveEvent } from '../../game/types';
+import { createMoveHandler } from '../worker/moveWorker';
+import { GameEngine } from '../../game/engine';
+import { subscribeChannel, AckType } from './subscribe';
 
 type Unsubscribe = () => Promise<void>;
 
 let channel: amqp.Channel | null = null;
 const unsubscribers: Unsubscribe[] = [];
-
-async function subscribe(
-  channel: amqp.Channel,
-  queue: string,
-): Promise<Unsubscribe> {
-  const { consumerTag } = await channel.consume(
-    queue,
-    (msg) => {
-      if (!msg) return;
-
-      try {
-        const payload = decode(msg.content);
-        const time = new Date(msg.properties.timestamp * 1000).toISOString();
-
-        console.log(`\n[EVENT] ${queue}`);
-        console.log(`   Time: ${time}`);
-        console.log(`   Key: ${msg.fields.routingKey}`);
-        console.log(`   Data:`, JSON.stringify(payload, null, 2));
-
-        channel.ack(msg);
-      } catch (err) {
-        console.log(`[FAIL] ${queue}:`, err);
-        channel.nack(msg, false, false); // → dlq
-      }
-    },
-    { noAck: false, consumerTag: `${queue}-consumer` },
-  );
-
-  return async () => {
-    await channel.cancel(consumerTag);
-    console.log(`Unsubscribed from ${queue}`);
-  };
-}
+let moveHandler: ((payload: MoveEvent) => Promise<AckType>) | null = null;
 
 export async function startConsumers() {
   const conn = await getConnection();
   channel = await conn.createChannel();
 
-  // Fetch one message at a time
+  // Fetch one message at a time (preserve ordering per game)
   await channel.prefetch(1);
 
-  unsubscribers.push(await subscribe(channel, QUEUE.DEBUG));
-  unsubscribers.push(await subscribe(channel, QUEUE.GAME_SERVER));
+  // Create a single GameEngine instance and move handler (DI)
+  const engine = new GameEngine();
+  moveHandler = createMoveHandler(engine);
 
-  console.log("\nALL SUBSCRIPTIONS ACTIVE");
-  console.log("   Ready for real-time game events!\n");
+  // subscribe debug queue
+  unsubscribers.push(
+    await subscribeChannel<any>(
+      channel,
+      QUEUE.DEBUG,
+      async (data) => {
+        console.log('\n[DEBUG]', JSON.stringify(data, null, 2));
+        return AckType.Ack;
+      },
+      (b) => decode(b),
+      1
+    )
+  );
+
+  // subscribe game server queue
+  unsubscribers.push(
+    await subscribeChannel<any>(
+      channel,
+      QUEUE.GAME_SERVER,
+      async (data) => {
+        if (data && data.type === EVENT_TYPE.MOVE) {
+          if (!moveHandler) return AckType.NackDiscard;
+          return moveHandler(data);
+        }
+        console.log('\n[GAME_SERVER]', JSON.stringify(data, null, 2));
+        return AckType.Ack;
+      },
+      (b) => decode(b),
+      1
+    )
+  );
+
+  console.log('\nALL SUBSCRIPTIONS ACTIVE');
+  console.log('   Ready for real-time game events!\n');
 
   return channel;
 }
@@ -66,5 +71,5 @@ export async function stopConsumers() {
     await channel.close();
     channel = null;
   }
-  console.log("All consumer stopped gracefully.");
+  console.log('All consumer stopped gracefully.');
 }
