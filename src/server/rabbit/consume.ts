@@ -1,18 +1,22 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { decode } from '@msgpack/msgpack';
 import type amqp from 'amqplib';
-import { getConnection } from './connection';
+import { getConnection, getConfirmChannel } from './connection';
 import { QUEUE } from './constants';
-import { EVENT_TYPE, type MoveEvent } from '../../game/types';
+import { EVENT_TYPE } from '../../game/types';
 import { createMoveHandler } from '../worker/moveWorker';
+import {
+  createJoinHandler,
+  createCreateGameHandler,
+} from '../worker/gameWorker';
 import { GameEngine } from '../../game/engine';
 import { subscribeChannel, AckType } from './subscribe';
-
-type Unsubscribe = () => Promise<void>;
+import { createPlacementHandler } from '../worker/placementWorker';
 
 let channel: amqp.Channel | null = null;
+
+type Unsubscribe = () => Promise<void>;
 const unsubscribers: Unsubscribe[] = [];
-let moveHandler: ((payload: MoveEvent) => Promise<AckType>) | null = null;
 
 export async function startConsumers() {
   const conn = await getConnection();
@@ -21,9 +25,15 @@ export async function startConsumers() {
   // Fetch one message at a time (preserve ordering per game)
   await channel.prefetch(1);
 
-  // Create a single GameEngine instance and move handler (DI)
+  // Create a single GameEngine
   const engine = new GameEngine();
-  moveHandler = createMoveHandler(engine);
+  // Create a single confirm channel for publishing from handlers
+  const confirmCh = await getConfirmChannel();
+  // Create event handlers
+  const moveHandler = createMoveHandler(engine, confirmCh);
+  const placeShipHandler = createPlacementHandler(engine, confirmCh);
+  const joinHandler = createJoinHandler(engine, confirmCh);
+  const createHandler = createCreateGameHandler(engine, confirmCh);
 
   // subscribe debug queue
   unsubscribers.push(
@@ -45,11 +55,26 @@ export async function startConsumers() {
       channel,
       QUEUE.GAME_SERVER,
       async (data) => {
-        if (data && data.type === EVENT_TYPE.MOVE) {
+        if (!data || typeof data.type !== 'string') {
+          return AckType.NackDiscard;
+        }
+
+        if (data.type === EVENT_TYPE.CREATE_GAME) {
+          if (!createHandler) return AckType.NackDiscard;
+          return createHandler(data);
+        }
+        if (data.type === EVENT_TYPE.JOIN) {
+          if (!joinHandler) return AckType.NackDiscard;
+          return joinHandler(data);
+        }
+        if (data.type === EVENT_TYPE.MOVE) {
           if (!moveHandler) return AckType.NackDiscard;
           return moveHandler(data);
         }
-        console.log('\n[GAME_SERVER]', JSON.stringify(data, null, 2));
+        if (data.type === EVENT_TYPE.PLACE_SHIP) {
+          if (!placeShipHandler) return AckType.NackDiscard;
+          return placeShipHandler(data);
+        }
         return AckType.Ack;
       },
       (b) => decode(b),

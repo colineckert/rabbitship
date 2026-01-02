@@ -104,10 +104,10 @@ export function isPlayersTurn(state: GameState, player: PlayerId): boolean {
   return state.phase === 'play' && state.turn === player;
 }
 
-export type GameEvent = JoinEvent | PlaceShipEvent | MoveEvent;
-
 export const EVENT_TYPE = {
   JOIN: 'join',
+  CREATE_GAME: 'create-game',
+  GAME_CREATED: 'game-created',
   PLACE_SHIP: 'place-ship',
   MOVE: 'move',
   MOVE_RESULT: 'move-result',
@@ -121,6 +121,21 @@ export interface JoinEvent {
   player: PlayerId;
   wsId: string;
   gameId: string;
+}
+
+export interface CreateGameEvent {
+  type: typeof EVENT_TYPE.CREATE_GAME;
+  player: PlayerId; // requested player slot (p1/p2)
+  wsId: string;
+  mode?: GameMode;
+}
+
+export interface GameCreatedEvent {
+  type: typeof EVENT_TYPE.GAME_CREATED;
+  gameId: string;
+  players: { p1: string | null; p2: string | null | 'ai' };
+  mode: GameMode;
+  createdAt: number;
 }
 
 export interface PlaceShipEvent {
@@ -153,3 +168,11 @@ export interface MoveResultEvent {
   p2Board: string[][]; // Opponent view for P2
   shipsSunk: { p1: number; p2: number };
 }
+
+export type GameEvent =
+  | JoinEvent
+  | CreateGameEvent
+  | GameCreatedEvent
+  | PlaceShipEvent
+  | MoveEvent
+  | MoveResultEvent;

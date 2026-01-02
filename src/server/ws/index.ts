@@ -32,6 +32,38 @@ const handlers: Record<
   string,
   (ws: WebSocketWithId, data: WsPayload) => Promise<void>
 > = {
+  [EVENT_TYPE.CREATE_GAME]: async (ws, data) => {
+    if (
+      !data ||
+      typeof data.wsId !== 'string' ||
+      typeof data.player !== 'string'
+    ) {
+      ws.send(JSON.stringify({ ok: false, error: 'invalid create payload' }));
+      return;
+    }
+
+    try {
+      const ch = await getConfirmChannel();
+      await publishMsgPack(
+        ch,
+        EXCHANGE.GAME_EVENTS,
+        EVENT_TO_ROUTING[EVENT_TYPE.CREATE_GAME] ?? ROUTING_KEY.GAME_CREATED,
+        {
+          type: EVENT_TYPE.CREATE_GAME,
+          player: data.player,
+          wsId: data.wsId,
+          mode: data.mode ?? 'multiplayer',
+          from: 'ws',
+          ts: Date.now(),
+        }
+      );
+      ws.send(JSON.stringify({ ok: true }));
+    } catch (err) {
+      console.error('WS publish error (create):', err);
+      ws.send(JSON.stringify({ ok: false, error: String(err) }));
+    }
+  },
+
   [EVENT_TYPE.JOIN]: async (ws, data) => {
     if (
       !data ||

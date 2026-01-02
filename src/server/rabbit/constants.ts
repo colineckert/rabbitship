@@ -39,8 +39,10 @@ export const CONSTANTS = {
 // Map event names (from game types) to routing keys used on the exchange.
 // This keeps event names and routing keys in sync and avoids inline strings.
 export const EVENT_TO_ROUTING: Record<EventType, string> = {
-  [EVENT_TYPE.MOVE]: ROUTING_KEY.GAME_MOVE,
-  [EVENT_TYPE.PLACE_SHIP]: ROUTING_KEY.GAME_CREATED,
+  [EVENT_TYPE.CREATE_GAME]: ROUTING_KEY.GAME_CREATED,
   [EVENT_TYPE.JOIN]: ROUTING_KEY.GAME_CREATED,
+  [EVENT_TYPE.MOVE]: ROUTING_KEY.GAME_MOVE,
+  [EVENT_TYPE.PLACE_SHIP]: ROUTING_KEY.GAME_ANY,
+  [EVENT_TYPE.GAME_CREATED]: ROUTING_KEY.GAME_CREATED,
   [EVENT_TYPE.MOVE_RESULT]: ROUTING_KEY.GAME_ANY,
 };
