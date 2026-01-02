@@ -3,6 +3,12 @@ import { getConfirmChannel } from '../rabbit/connection';
 import { EXCHANGE, ROUTING_KEY, EVENT_TO_ROUTING } from '../rabbit/constants';
 import { publishMsgPack } from '../rabbit/publish';
 import { EVENT_TYPE } from '../../game/types';
+import {
+  isCreateGamePayload,
+  isJoinPayload,
+  isMovePayload,
+  isPlaceShipPayload,
+} from './utils';
 
 type WebSocketWithId = WebSocket & { id?: string };
 type WsPayload = {
@@ -16,29 +22,19 @@ let wss: WebSocketServer | null = null;
 // Prefer over trusting client-sent gameId for ownership.
 const wsToGame = new Map<string, string>();
 
-function isMovePayload(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  obj: any
-): obj is { player: string; x: number; y: number } {
-  return (
-    obj &&
-    typeof obj.player === 'string' &&
-    typeof obj.x === 'number' &&
-    typeof obj.y === 'number'
-  );
-}
-
 const handlers: Record<
   string,
   (ws: WebSocketWithId, data: WsPayload) => Promise<void>
 > = {
   [EVENT_TYPE.CREATE_GAME]: async (ws, data) => {
-    if (
-      !data ||
-      typeof data.wsId !== 'string' ||
-      typeof data.player !== 'string'
-    ) {
+    if (!data || !isCreateGamePayload(data)) {
       ws.send(JSON.stringify({ ok: false, error: 'invalid create payload' }));
+      return;
+    }
+
+    const resolvedWsId = typeof data.wsId === 'string' ? data.wsId : ws.id;
+    if (!resolvedWsId) {
+      ws.send(JSON.stringify({ ok: false, error: 'missing ws identity' }));
       return;
     }
 
@@ -51,7 +47,7 @@ const handlers: Record<
         {
           type: EVENT_TYPE.CREATE_GAME,
           player: data.player,
-          wsId: data.wsId,
+          wsId: resolvedWsId,
           mode: data.mode ?? 'multiplayer',
           from: 'ws',
           ts: Date.now(),
@@ -65,16 +61,60 @@ const handlers: Record<
   },
 
   [EVENT_TYPE.JOIN]: async (ws, data) => {
-    if (
-      !data ||
-      typeof data.wsId !== 'string' ||
-      typeof data.gameId !== 'string'
-    ) {
+    if (!data || !isJoinPayload(data)) {
       ws.send(JSON.stringify({ ok: false, error: 'invalid join payload' }));
       return;
     }
-    wsToGame.set(data.wsId, data.gameId);
+
+    const resolvedWsId = typeof data.wsId === 'string' ? data.wsId : ws.id;
+    if (!resolvedWsId) {
+      ws.send(JSON.stringify({ ok: false, error: 'missing ws identity' }));
+      return;
+    }
+
+    wsToGame.set(resolvedWsId, data.gameId);
     ws.send(JSON.stringify({ ok: true }));
+  },
+
+  [EVENT_TYPE.PLACE_SHIP]: async (ws, data) => {
+    if (!isPlaceShipPayload(data)) {
+      ws.send(JSON.stringify({ ok: false, error: 'invalid place payload' }));
+      return;
+    }
+
+    const resolvedWsId = typeof data.wsId === 'string' ? data.wsId : ws.id;
+    const gameId =
+      (resolvedWsId ? wsToGame.get(resolvedWsId) : undefined) ??
+      (typeof data.gameId === 'string' ? data.gameId : undefined);
+    if (!gameId) {
+      ws.send(JSON.stringify({ ok: false, error: 'no gameId' }));
+      return;
+    }
+
+    try {
+      const ch = await getConfirmChannel();
+      await publishMsgPack(
+        ch,
+        EXCHANGE.GAME_EVENTS,
+        EVENT_TO_ROUTING[EVENT_TYPE.PLACE_SHIP] ?? ROUTING_KEY.GAME_ANY,
+        {
+          type: EVENT_TYPE.PLACE_SHIP,
+          gameId,
+          player: data.player,
+          wsId: resolvedWsId,
+          ship: data.ship,
+          x: data.x,
+          y: data.y,
+          dir: data.dir,
+          from: 'ws',
+          ts: Date.now(),
+        }
+      );
+      ws.send(JSON.stringify({ ok: true }));
+    } catch (err) {
+      console.error('WS publish error (place):', err);
+      ws.send(JSON.stringify({ ok: false, error: String(err) }));
+    }
   },
 
   [EVENT_TYPE.MOVE]: async (ws, data) => {
@@ -83,9 +123,9 @@ const handlers: Record<
       return;
     }
 
+    const resolvedWsId = typeof data.wsId === 'string' ? data.wsId : ws.id;
     const gameId =
-      (typeof data.wsId === 'string' ? wsToGame.get(data.wsId) : undefined) ??
-      data.gameId;
+      (resolvedWsId ? wsToGame.get(resolvedWsId) : undefined) ?? data.gameId;
     if (!gameId) {
       ws.send(JSON.stringify({ ok: false, error: 'no gameId' }));
       return;
@@ -101,6 +141,7 @@ const handlers: Record<
           type: EVENT_TYPE.MOVE,
           gameId,
           player: data.player,
+          wsId: resolvedWsId,
           x: data.x,
           y: data.y,
           from: 'ws',
