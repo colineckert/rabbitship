@@ -75,7 +75,7 @@ const handlers: Record<
           ts: Date.now(),
         }
       );
-      ws.send(JSON.stringify({ ok: true, queued: true }));
+      ws.send(JSON.stringify({ ok: true }));
     } catch (err) {
       console.error('WS publish error:', err);
       ws.send(JSON.stringify({ ok: false, error: String(err) }));
