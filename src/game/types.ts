@@ -104,45 +104,6 @@ export function isPlayersTurn(state: GameState, player: PlayerId): boolean {
   return state.phase === 'play' && state.turn === player;
 }
 
-// Event payloads (for pub/sub)
-export interface JoinEvent {
-  type: 'join';
-  player: PlayerId;
-  wsId: string;
-  gameId: string;
-}
-
-export interface PlaceShipEvent {
-  gameId: string;
-  type: 'place-ship';
-  player: PlayerId;
-  ship: ShipKey; // 'carrier' | 'battleship' | ...
-  x: number;
-  y: number;
-  dir: Direction;
-}
-
-export interface MoveEvent {
-  gameId: string;
-  type: 'move';
-  player: PlayerId;
-  x: number;
-  y: number;
-}
-
-export interface MoveResultEvent {
-  gameId: string;
-  type: 'move-result';
-  x: number;
-  y: number;
-  hit: boolean;
-  sunkShip?: ShipKey;
-  nextTurn: PlayerId;
-  p1Board: string[][]; // Opponent view for P1
-  p2Board: string[][]; // Opponent view for P2
-  shipsSunk: { p1: number; p2: number };
-}
-
 export type GameEvent = JoinEvent | PlaceShipEvent | MoveEvent;
 
 export const EVENT_TYPE = {
@@ -153,3 +114,42 @@ export const EVENT_TYPE = {
 } as const;
 
 export type EventType = (typeof EVENT_TYPE)[keyof typeof EVENT_TYPE];
+
+// Event payloads (for pub/sub)
+export interface JoinEvent {
+  type: typeof EVENT_TYPE.JOIN;
+  player: PlayerId;
+  wsId: string;
+  gameId: string;
+}
+
+export interface PlaceShipEvent {
+  gameId: string;
+  type: typeof EVENT_TYPE.PLACE_SHIP;
+  player: PlayerId;
+  ship: ShipKey; // 'carrier' | 'battleship' | ...
+  x: number;
+  y: number;
+  dir: Direction;
+}
+
+export interface MoveEvent {
+  gameId: string;
+  type: typeof EVENT_TYPE.MOVE;
+  player: PlayerId;
+  x: number;
+  y: number;
+}
+
+export interface MoveResultEvent {
+  gameId: string;
+  type: typeof EVENT_TYPE.MOVE_RESULT;
+  x: number;
+  y: number;
+  hit: boolean;
+  sunkShip?: ShipKey;
+  nextTurn: PlayerId;
+  p1Board: string[][]; // Opponent view for P1
+  p2Board: string[][]; // Opponent view for P2
+  shipsSunk: { p1: number; p2: number };
+}
