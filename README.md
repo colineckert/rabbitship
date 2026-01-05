@@ -13,53 +13,81 @@
 docker compose up --build
 ```
 
+### Quick Dev Run (recommended)
+
+Prereqs: Docker (for RabbitMQ) and Bun (server runtime). Node/npm for client build.
+
+1. Start RabbitMQ:
+
+```bash
+docker-compose up -d rabbitmq
+# visit RabbitMQ UI: http://localhost:15672 (guest/guest)
+```
+
+2. Install dependencies (client/tools):
+
+```bash
+npm install
+```
+
+3. Start the server (Bun):
+
+```bash
+npm run server
+# or: bun run src/server/http/server.ts
+```
+
+4. Start the client dev server (optional):
+
+```bash
+npm run dev
+# open http://localhost:3000
+```
+
+Notes:
+
+- WebSocket endpoint: `ws://localhost:8080`.
+- If running via Docker Compose the `app` service will be built and started and already points RabbitMQ at the `rabbitmq` service.
+
 ## Architecture
 
 RabbitMQ setup diagram:
 
 ```mermaid
-graph TD
-    subgraph "Exchanges"
-        A[game.events<br/>topic, durable] -->|test.#| B[debug-queue]
-        A -->|game.*| C[game-server]
-        A -->|error.#| D[dlq]
-        E[game.dlx<br/>direct, durable] -->|error.*| D
-    end
+graph LR
+        subgraph Clients
+            Client[Browser WS client]
+        end
 
-    subgraph "Queues"
-        B[debug-queue<br/>durable, 7-day TTL, max 1000]
-        C[game-server<br/>durable]
-        D[dlq<br/>durable]
-    end
+        subgraph Transport
+            WS[WS Server]
+        end
 
-    style A fill:#4ade80,stroke:#166534
-    style E fill:#f87171,stroke:#991b1b
-    style B fill:#60a5fa,stroke:#1e40af
-    style C fill:#fbbf24,stroke:#f59e0b
-    style D fill:#f87171,stroke:#991b1b
-```
+        subgraph Broker
+            Ex[game.events<br/>topic]
+            Q1[game-server queue]
+            Q2[debug-queue]
+            DLQ[dlq]
+            DLX[game.dlx]
+        end
 
-File structure:
+        subgraph Workers
+            Worker[game workers<br/>(create/join/place/move)]
+            Broadcaster[broadcaster]
+        end
 
-```
-src/
-├── server/
-│   ├── game/
-│   │   ├── types.ts          ← ONLY types/interfaces
-│   │   ├── board.ts          ← ship placement logic
-│   │   ├── shot.ts           ← shot resolution
-│   │   ├── ai.ts             ← AI brain
-│   │   ├── engine.ts         ← main GameEngine class
-│   │   └── index.ts          ← barrel export
-│   ├── rabbit/
-│   │   ├── constants.ts
-│   │   ├── connection.ts
-│   │   ├── setup.ts
-│   │   ├── publisher.ts
-│   │   ├── consumer.ts
-│   │   └── index.ts
-│   └── http/
-│       └── server.ts
-└── ws/
-    └── server.ts
+        Client -->|intent| WS -->|publish| Ex
+        Ex -->|game.server routing| Q1
+        Ex -->|test.#| Q2
+        Ex -->|error.#| DLQ
+        DLX -->|error.*| DLQ
+        Q1 --> Worker
+        Ex --> Broadcaster
+        Broadcaster -->|forward| WS
+
+        style Ex fill:#4ade80,stroke:#166534
+        style DLX fill:#f87171,stroke:#991b1b
+        style Q2 fill:#60a5fa,stroke:#1e40af
+        style Q1 fill:#fbbf24,stroke:#f59e0b
+        style DLQ fill:#f87171,stroke:#991b1b
 ```
