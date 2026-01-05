@@ -156,6 +156,45 @@ const handlers: Record<
   },
 };
 
+// Broadcast an authoritative event (from workers) to connected WS clients.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function broadcastEvent(event: any) {
+  if (!wss) return;
+
+  if (
+    event?.type === EVENT_TYPE.GAME_CREATED &&
+    event.gameId &&
+    event.players
+  ) {
+    const { gameId, players } = event as {
+      gameId: string;
+      players: { p1: string | null; p2: string | null | 'ai' };
+    };
+    if (players.p1 && typeof players.p1 === 'string')
+      wsToGame.set(players.p1, gameId);
+    if (players.p2 && typeof players.p2 === 'string')
+      wsToGame.set(players.p2, gameId);
+  }
+
+  const payload = JSON.stringify(event);
+  for (const client of wss.clients) {
+    const c = client as WebSocketWithId;
+    if (!c || c.readyState !== WebSocket.OPEN) continue;
+    try {
+      // deliver only to clients that are mapped to this game
+      if (event && typeof event.gameId === 'string') {
+        const mapped = c.id ? wsToGame.get(c.id) : undefined;
+        if (mapped === event.gameId) c.send(payload);
+      } else {
+        // fallback: broadcast to all
+        c.send(payload);
+      }
+    } catch {
+      // ignore send errors per-client
+    }
+  }
+}
+
 export async function startWsServer(port = 8080) {
   if (wss) return;
   wss = new WebSocketServer({ port });

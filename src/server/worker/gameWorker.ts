@@ -72,7 +72,7 @@ export function createCreateGameHandler(
   };
 }
 
-export function createJoinHandler(
+export function createJoinGameHandler(
   engine: GameEngine,
   confirmCh: amqp.ConfirmChannel
 ) {

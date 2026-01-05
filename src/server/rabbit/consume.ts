@@ -6,11 +6,12 @@ import { QUEUE } from './constants';
 import { EVENT_TYPE } from '../../game/types';
 import { createMoveHandler } from '../worker/moveWorker';
 import {
-  createJoinHandler,
+  createJoinGameHandler,
   createCreateGameHandler,
 } from '../worker/gameWorker';
 import { GameEngine } from '../../game/engine';
 import { subscribeChannel, AckType } from './subscribe';
+import { startBroadcaster } from './broadcaster';
 import { createPlacementHandler } from '../worker/placementWorker';
 
 let channel: amqp.Channel | null = null;
@@ -30,10 +31,10 @@ export async function startConsumers() {
   // Create a single confirm channel for publishing from handlers
   const confirmCh = await getConfirmChannel();
   // Create event handlers
-  const moveHandler = createMoveHandler(engine, confirmCh);
-  const placeShipHandler = createPlacementHandler(engine, confirmCh);
-  const joinHandler = createJoinHandler(engine, confirmCh);
   const createHandler = createCreateGameHandler(engine, confirmCh);
+  const joinHandler = createJoinGameHandler(engine, confirmCh);
+  const placeShipHandler = createPlacementHandler(engine, confirmCh);
+  const moveHandler = createMoveHandler(engine, confirmCh);
 
   // subscribe debug queue
   unsubscribers.push(
@@ -81,6 +82,9 @@ export async function startConsumers() {
       1
     )
   );
+
+  // start broadcaster (binds to game.*) to forward authoritative events to WS clients
+  unsubscribers.push(await startBroadcaster(channel));
 
   console.log('\nALL SUBSCRIPTIONS ACTIVE');
   console.log('   Ready for real-time game events!\n');
