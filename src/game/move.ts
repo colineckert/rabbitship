@@ -6,7 +6,7 @@ import {
   type ShipKey,
   ShipLengthMap,
   EVENT_TYPE,
-} from '@/game/types';
+} from './types';
 
 function isValidCoord(x: number, y: number): boolean {
   return x >= 0 && x < 10 && y >= 0 && y < 10;

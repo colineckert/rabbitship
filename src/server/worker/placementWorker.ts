@@ -1,10 +1,10 @@
 import type amqp from 'amqplib';
-import type { GameEngine } from '@/game/engine';
-import { AckType } from '@/rabbit/subscribe';
-import { handlePlaceShip } from '@/game/placement';
-import { EVENT_TYPE, type PlaceShipEvent } from '@/game';
-import { EVENT_TO_ROUTING, EXCHANGE } from '@/rabbit/constants';
-import { publishMsgPack } from '@/rabbit/publish';
+import type { GameEngine } from '../../game/engine';
+import { AckType } from '../rabbit/subscribe';
+import { handlePlaceShip } from '../../game/placement';
+import { EVENT_TYPE, type PlaceShipEvent } from '../../game/types';
+import { EVENT_TO_ROUTING, EXCHANGE } from '../rabbit/constants';
+import { publishMsgPack } from '../rabbit/publish';
 
 export function createPlacementHandler(
   engine: GameEngine,

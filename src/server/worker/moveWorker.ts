@@ -1,11 +1,11 @@
 import type amqp from 'amqplib';
-import { publishMsgPack } from '@/rabbit/publish';
-import { EXCHANGE, EVENT_TO_ROUTING } from '@/rabbit/constants';
-import { handleMove } from '@/game/move';
-import { EVENT_TYPE } from '@/game/types';
-import type { GameEngine } from '@/game/engine';
-import type { GameState, MoveEvent } from '@/game/types';
-import { AckType } from '@/rabbit/subscribe';
+import { publishMsgPack } from '../rabbit/publish';
+import { EXCHANGE, EVENT_TO_ROUTING } from '../rabbit/constants';
+import { handleMove } from '../../game/move';
+import { EVENT_TYPE } from '../../game/types';
+import type { GameEngine } from '../../game/engine';
+import type { GameState, MoveEvent } from '../../game/types';
+import { AckType } from '../rabbit/subscribe';
 
 // Returns a handler that accepts a deserialized Move payload and returns an AckType.
 export function createMoveHandler(
