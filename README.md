@@ -64,7 +64,7 @@ graph LR
         end
 
         subgraph Broker
-            Ex[game.events<br/>topic]
+            Ex[game.events topic]
             Q1[game-server queue]
             Q2[debug-queue]
             DLQ[dlq]
@@ -72,7 +72,7 @@ graph LR
         end
 
         subgraph Workers
-            Worker[game workers<br/>(create/join/place/move)]
+            Worker[game workers (create/join/place/move)]
             Broadcaster[broadcaster]
         end
 
