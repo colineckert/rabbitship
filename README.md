@@ -55,39 +55,37 @@ RabbitMQ setup diagram:
 
 ```mermaid
 graph LR
-        subgraph Clients
-            Client[Browser WS client]
-        end
+    subgraph Clients
+        Client[Browser WS client]
+    end
+    subgraph Transport
+        WS[WS Server]
+    end
+    subgraph Broker
+        Ex[game.events topic]
+        Q1[game-server queue]
+        Q2[debug-queue]
+        DLQ[dlq]
+        DLX[game.dlx]
+    end
+    subgraph Workers
+        Worker["game workers (create/join/place/move)"]
+        Broadcaster[broadcaster]
+    end
 
-        subgraph Transport
-            WS[WS Server]
-        end
+    Client -->|intent| WS -->|publish| Ex
+    Ex -->|"game.*"| Q1
+    Ex -->|"test.#"| Q2
+    Ex -->|"error.#"| DLQ
+    DLX -->|"error.*"| DLQ
 
-        subgraph Broker
-            Ex[game.events topic]
-            Q1[game-server queue]
-            Q2[debug-queue]
-            DLQ[dlq]
-            DLX[game.dlx]
-        end
+    Q1 --> Worker
+    Ex --> Broadcaster
+    Broadcaster -->|forward| WS
 
-        subgraph Workers
-            Worker[game workers (create/join/place/move)]
-            Broadcaster[broadcaster]
-        end
-
-        Client -->|intent| WS -->|publish| Ex
-        Ex -->|game.server routing| Q1
-        Ex -->|test.#| Q2
-        Ex -->|error.#| DLQ
-        DLX -->|error.*| DLQ
-        Q1 --> Worker
-        Ex --> Broadcaster
-        Broadcaster -->|forward| WS
-
-        style Ex fill:#4ade80,stroke:#166534
-        style DLX fill:#f87171,stroke:#991b1b
-        style Q2 fill:#60a5fa,stroke:#1e40af
-        style Q1 fill:#fbbf24,stroke:#f59e0b
-        style DLQ fill:#f87171,stroke:#991b1b
+    style Ex fill:#4ade80,stroke:#166534
+    style DLX fill:#f87171,stroke:#991b1b
+    style Q2 fill:#60a5fa,stroke:#1e40af
+    style Q1 fill:#fbbf24,stroke:#f59e0b
+    style DLQ fill:#f87171,stroke:#991b1b
 ```
