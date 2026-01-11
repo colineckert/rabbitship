@@ -15,10 +15,25 @@ function App() {
   const wsRef = useRef<WebSocket | null>(null);
   const showLogs = import.meta.env.DEV;
 
+  const playerBoard = useRef<string[][]>(
+    Array.from({ length: 10 }, () => Array(10).fill("empty")),
+  );
+
   function addLog(text: string) {
     setLogs((s) => [{ time: now(), text }, ...s].slice(0, 200));
     // also console.log for server-side trace
     console.log(text);
+  }
+
+  // Handle incoming events from server
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async function handleEvent(data: any) {
+    // TODO: expand handling based on event types with proper typing
+    console.log("Handling event:", data);
+
+    if (data.type === EVENT_TYPE.PLACE_SHIP || data.type === EVENT_TYPE.MOVE) {
+      playerBoard.current = data.playerBoard;
+    }
   }
 
   useEffect(() => {
@@ -39,10 +54,12 @@ function App() {
       addLog("WS error");
       console.error(error);
     };
-    ws.onmessage = (event) => {
+    ws.onmessage = async (event) => {
       try {
         const data = JSON.parse(event.data);
         addLog(`RECV ← ${JSON.stringify(data)}`);
+
+        await handleEvent(data);
 
         // TODO: handle event types and update board
       } catch (error) {
@@ -178,9 +195,15 @@ function App() {
             }}
           >
             {logs.map((l, i) => (
-              <div key={i} style={{ fontFamily: "monospace", fontSize: 12 }}>
-                <span style={{ color: "#94a3b8" }}>{l.time} </span>
-                <span>{l.text}</span>
+              <div
+                key={i}
+                className="grid grid-cols-5 gap-4"
+                style={{ fontFamily: "monospace", fontSize: 12 }}
+              >
+                <span className="col-span-1" style={{ color: "#94a3b8" }}>
+                  {l.time}{" "}
+                </span>
+                <span className="col-span-4 justify-self-start">{l.text}</span>
               </div>
             ))}
           </div>
@@ -188,7 +211,7 @@ function App() {
       )}
 
       <div className="mt-8 flex justify-center">
-        <Board />
+        <Board playerBoard={playerBoard.current} />
       </div>
     </div>
   );
