@@ -19,7 +19,7 @@ WORKDIR /app
 
 # Copy built assets
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/src/server ./src/server
+COPY --from=builder /app/src ./src
 COPY --from=builder /app/package.json ./
 
 # Install production deps only
