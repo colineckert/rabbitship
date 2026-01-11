@@ -13,6 +13,7 @@ function App() {
   const [wsState, setWsState] = useState("DISCONNECTED");
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const wsRef = useRef<WebSocket | null>(null);
+  const showLogs = import.meta.env.DEV;
 
   function addLog(text: string) {
     setLogs((s) => [{ time: now(), text }, ...s].slice(0, 200));
@@ -42,6 +43,8 @@ function App() {
       try {
         const data = JSON.parse(event.data);
         addLog(`RECV ← ${JSON.stringify(data)}`);
+
+        // TODO: handle event types and update board
       } catch (error) {
         console.error("Failed to parse WS message", error);
         addLog(`RECV ← ${String(event.data)}`);
@@ -135,7 +138,7 @@ function App() {
         </div>
       </div>
 
-      <div className="mb-6 flex gap-3">
+      <div className="mb-6 flex gap-3 justify-center">
         <button
           onClick={newGame}
           className="px-4 py-2 bg-blue-500 text-white rounded"
@@ -162,27 +165,29 @@ function App() {
         </button>
       </div>
 
-      <div className="mb-6">
-        <h2 className="font-semibold">Logs</h2>
-        <div
-          style={{
-            maxHeight: 320,
-            overflow: "auto",
-            background: "#0f172a",
-            color: "#e2e8f0",
-            padding: 8,
-          }}
-        >
-          {logs.map((l, i) => (
-            <div key={i} style={{ fontFamily: "monospace", fontSize: 12 }}>
-              <span style={{ color: "#94a3b8" }}>{l.time} </span>
-              <span>{l.text}</span>
-            </div>
-          ))}
+      {showLogs && (
+        <div className="mb-6">
+          <h2 className="font-semibold">Logs</h2>
+          <div
+            style={{
+              maxHeight: 320,
+              overflow: "auto",
+              background: "#0f172a",
+              color: "#e2e8f0",
+              padding: 8,
+            }}
+          >
+            {logs.map((l, i) => (
+              <div key={i} style={{ fontFamily: "monospace", fontSize: 12 }}>
+                <span style={{ color: "#94a3b8" }}>{l.time} </span>
+                <span>{l.text}</span>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
-      <div className="mt-8">
+      <div className="mt-8 flex justify-center">
         <Board />
       </div>
     </div>
