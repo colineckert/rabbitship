@@ -197,13 +197,16 @@ function App() {
             {logs.map((l, i) => (
               <div
                 key={i}
-                className="grid grid-cols-5 gap-4"
+                className="grid grid-cols-7 gap-2"
                 style={{ fontFamily: "monospace", fontSize: 12 }}
               >
-                <span className="col-span-1" style={{ color: "#94a3b8" }}>
+                <span
+                  className="col-span-2 text-center"
+                  style={{ color: "#94a3b8" }}
+                >
                   {l.time}{" "}
                 </span>
-                <span className="col-span-4 justify-self-start">{l.text}</span>
+                <span className="col-span-5 text-left">- {l.text}</span>
               </div>
             ))}
           </div>
