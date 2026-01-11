@@ -1,2 +1,2 @@
-export * from "@/game/types";
-export * from "@/game/board";
+export * from "./types";
+export * from "./board";

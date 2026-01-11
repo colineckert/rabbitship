@@ -1,14 +1,14 @@
-import type amqp from 'amqplib';
-import { AckType } from '../rabbit/subscribe';
-import { GameEngine } from '../../game/engine';
+import type amqp from "amqplib";
+import { AckType } from "../rabbit/subscribe";
+import { GameEngine } from "../../game/engine";
 import {
   EVENT_TYPE,
   type JoinEvent,
   type CreateGameEvent,
   type GameCreatedEvent,
-} from '../../game/types';
-import { EVENT_TO_ROUTING, EXCHANGE } from '../rabbit/constants';
-import { publishMsgPack } from '../rabbit/publish';
+} from "../../game/types";
+import { EVENT_TO_ROUTING, EXCHANGE } from "../rabbit/constants";
+import { publishMsgPack } from "../rabbit/publish";
 
 function makeGameId() {
   try {
@@ -20,18 +20,18 @@ function makeGameId() {
 
 export function createCreateGameHandler(
   engine: GameEngine,
-  confirmCh: amqp.ConfirmChannel
+  confirmCh: amqp.ConfirmChannel,
 ) {
   return async function createHandler(
-    payload: CreateGameEvent
+    payload: CreateGameEvent,
   ): Promise<AckType> {
     try {
       const wsId = payload?.wsId;
       const player = payload?.player;
-      const mode = payload?.mode ?? 'multiplayer';
+      const mode = payload?.mode ?? "multiplayer";
 
       if (!wsId || !player) {
-        console.error('Create event missing wsId or player');
+        console.error("Create event missing wsId or player");
         return AckType.NackDiscard;
       }
 
@@ -40,7 +40,7 @@ export function createCreateGameHandler(
 
       const state = engine.getGame(gameId)!;
       // assign creator to requested slot when available
-      if (player === 'p1' || player === 'p2') {
+      if (player === "p1" || player === "p2") {
         state.players[player] = wsId;
       }
 
@@ -58,15 +58,15 @@ export function createCreateGameHandler(
           confirmCh,
           EXCHANGE.GAME_EVENTS,
           routing,
-          payloadOut
+          payloadOut,
         );
         return AckType.Ack;
       } catch (err) {
-        console.error('Failed to publish GAME_CREATED event:', err);
+        console.error("Failed to publish GAME_CREATED event:", err);
         return AckType.NackRequeue;
       }
     } catch (err) {
-      console.error('createHandler unexpected error:', err);
+      console.error("createHandler unexpected error:", err);
       return AckType.NackDiscard;
     }
   };
@@ -74,7 +74,7 @@ export function createCreateGameHandler(
 
 export function createJoinGameHandler(
   engine: GameEngine,
-  confirmCh: amqp.ConfirmChannel
+  confirmCh: amqp.ConfirmChannel,
 ) {
   return async function joinHandler(payload: JoinEvent): Promise<AckType> {
     try {
@@ -83,7 +83,7 @@ export function createJoinGameHandler(
       const gameId: string | undefined = payload?.gameId;
 
       if (!wsId || !player || !gameId) {
-        console.error('Join event missing wsId, player or gameId');
+        console.error("Join event missing wsId, player or gameId");
         return AckType.NackDiscard;
       }
 
@@ -94,11 +94,13 @@ export function createJoinGameHandler(
       }
 
       // Assign wsId to the requested player slot if available
-      if (player === 'p1' || player === 'p2') {
+      if (player === "p1" || player === "p2") {
         if (!state.players[player]) {
           state.players[player] = wsId;
         } else {
           console.warn(`Player slot ${player} already taken in game ${gameId}`);
+          // don't publish if player slot taken
+          return AckType.NackDiscard;
         }
       } else {
         console.warn(`Unknown player id in join: ${player}`);
@@ -120,15 +122,15 @@ export function createJoinGameHandler(
           confirmCh,
           EXCHANGE.GAME_EVENTS,
           routing,
-          payloadOut
+          payloadOut,
         );
         return AckType.Ack;
       } catch (err) {
-        console.error('Failed to publish join event:', err);
+        console.error("Failed to publish join event:", err);
         return AckType.NackRequeue;
       }
     } catch (err) {
-      console.error('joinHandler unexpected error:', err);
+      console.error("joinHandler unexpected error:", err);
       return AckType.NackDiscard;
     }
   };
