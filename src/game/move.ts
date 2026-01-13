@@ -96,7 +96,5 @@ export function handleMove(
     nextTurn: move.player === "p1" ? "p2" : "p1",
   };
 
-  // TODO: publish move result event to message broker
-
   return moveResult;
 }

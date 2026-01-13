@@ -1,7 +1,7 @@
 import "./App.css";
 import { useEffect, useRef, useState } from "react";
 import { Board } from "./components/board";
-import { EVENT_TYPE } from "../game/types";
+import { EVENT_TYPE, type ShipKey } from "../game/types";
 
 type LogEntry = { time: string; text: string };
 
@@ -14,6 +14,13 @@ function App() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const wsRef = useRef<WebSocket | null>(null);
   const showLogs = import.meta.env.DEV;
+  const [shipsToPlace, setShipsToPlace] = useState({
+    carrier: true,
+    battleship: true,
+    cruiser1: true,
+    cruiser2: true,
+    destroyer: true,
+  });
 
   const playerBoard = useRef<string[][]>(
     Array.from({ length: 10 }, () => Array(10).fill("empty")),
@@ -112,14 +119,34 @@ function App() {
     const gameId = prompt("gameId?");
     if (!gameId) return;
     const player = prompt("player (p1/p2)", "p1") || "p1";
-    const ship =
-      prompt(
-        "ship key (carrier/battleship/cruiser1/cruiser2/destroyer)",
-        "carrier",
-      ) || "carrier";
+
+    const availableShips = Object.entries(shipsToPlace)
+      .filter(([, toPlace]) => toPlace)
+      .map(([shipKey]) => shipKey);
+    if (availableShips.length === 0) {
+      alert("No ships left to place!");
+      return;
+    }
+
+    let ship: ShipKey;
+    while (true) {
+      const shipInput = prompt(
+        `ship key (${availableShips.join("/")})`,
+        availableShips[0],
+      );
+      if (shipInput && availableShips.includes(shipInput)) {
+        ship = shipInput as ShipKey;
+        break;
+      }
+      alert("Invalid ship key, please try again.");
+    }
+
+    setShipsToPlace((s) => ({ ...s, [ship]: false }));
+
     const x = Number(prompt("x (0-9)", "0"));
     const y = Number(prompt("y (0-9)", "0"));
     const dir = prompt("dir (h/v)", "h") || "h";
+
     send({
       type: EVENT_TYPE.PLACE_SHIP,
       gameId,
