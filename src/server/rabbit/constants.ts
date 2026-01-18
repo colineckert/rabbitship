@@ -15,8 +15,14 @@ export const QUEUE = {
 export const ROUTING_KEY = {
   // Game events
   GAME_ANY: "game.*",
+  CREATE_GAME: "game.create",
   GAME_CREATED: "game.created",
+  GAME_JOIN: "game.join",
+  PLAYER_JOINED: "game.player-joined",
+  PLACE_SHIP: "game.place-ship",
+  PLACE_SHIP_RESULT: "game.place-ship-result",
   GAME_MOVE: "game.move",
+  GAME_MOVE_RESULT: "game.move-result",
   GAME_OVER: "game.over",
 
   // Debug
@@ -38,10 +44,12 @@ export const CONSTANTS = {
 // Map event names (from game types) to routing keys used on the exchange.
 // This keeps event names and routing keys in sync and avoids inline strings.
 export const EVENT_TO_ROUTING: Record<EventType, string> = {
-  [EVENT_TYPE.CREATE_GAME]: ROUTING_KEY.GAME_CREATED,
-  [EVENT_TYPE.JOIN]: ROUTING_KEY.GAME_CREATED,
-  [EVENT_TYPE.MOVE]: ROUTING_KEY.GAME_MOVE,
-  [EVENT_TYPE.PLACE_SHIP]: ROUTING_KEY.GAME_ANY,
+  [EVENT_TYPE.CREATE_GAME]: ROUTING_KEY.CREATE_GAME,
   [EVENT_TYPE.GAME_CREATED]: ROUTING_KEY.GAME_CREATED,
-  [EVENT_TYPE.MOVE_RESULT]: ROUTING_KEY.GAME_ANY,
+  [EVENT_TYPE.JOIN]: ROUTING_KEY.GAME_JOIN,
+  [EVENT_TYPE.PLAYER_JOINED]: ROUTING_KEY.PLAYER_JOINED,
+  [EVENT_TYPE.PLACE_SHIP]: ROUTING_KEY.PLACE_SHIP,
+  [EVENT_TYPE.PLACE_SHIP_RESULT]: ROUTING_KEY.PLACE_SHIP_RESULT,
+  [EVENT_TYPE.MOVE]: ROUTING_KEY.GAME_MOVE,
+  [EVENT_TYPE.MOVE_RESULT]: ROUTING_KEY.GAME_MOVE_RESULT,
 };

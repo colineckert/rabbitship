@@ -1,19 +1,23 @@
 import "./App.css";
-import { useEffect, useRef, useState } from "react";
-import { Board } from "./components/board";
-import { EVENT_TYPE, type ShipKey } from "../game/types";
-
+import { useCallback, useEffect, useRef, useState } from "react";
+import { EVENT_TYPE, type GameEvent, type ShipKey } from "../game/types";
+import { Board } from "./components/Board";
 type LogEntry = { time: string; text: string };
 
 function now() {
   return new Date().toISOString();
 }
 
+// TODO: consider global store for tracking games
+
 function App() {
   const [wsState, setWsState] = useState("DISCONNECTED");
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const wsRef = useRef<WebSocket | null>(null);
   const showLogs = import.meta.env.DEV;
+
+  const [activeGameId, setActiveGameId] = useState<string | null>(null);
+  const [playerId, setPlayerId] = useState<"p1" | "p2" | null>(null);
   const [shipsToPlace, setShipsToPlace] = useState({
     carrier: true,
     battleship: true,
@@ -33,15 +37,29 @@ function App() {
   }
 
   // Handle incoming events from server
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async function handleEvent(data: any) {
-    // TODO: expand handling based on event types with proper typing
-    console.log("Handling event:", data);
+  const handleEvent = useCallback(
+    (data: GameEvent) => {
+      // TODO: expand handling based on event types with proper typing
+      console.log("Handling event:", data);
 
-    if (data.type === EVENT_TYPE.PLACE_SHIP || data.type === EVENT_TYPE.MOVE) {
-      playerBoard.current = data.playerBoard;
-    }
-  }
+      if (
+        data.type === EVENT_TYPE.GAME_CREATED ||
+        data.type === EVENT_TYPE.JOIN
+      ) {
+        console.log("*** Game created with ID:", data.gameId);
+        setActiveGameId(data.gameId);
+      }
+      if (data.type === EVENT_TYPE.PLACE_SHIP_RESULT) {
+        console.log("*** Updating player board from event ***");
+        playerBoard.current = data.playerBoard;
+      }
+      if (data.type === EVENT_TYPE.MOVE_RESULT) {
+        console.log("*** Updating player board from move result ***");
+        playerBoard.current = playerId === "p1" ? data.p1Board : data.p2Board;
+      }
+    },
+    [playerId],
+  );
 
   useEffect(() => {
     const url = `ws://${location.hostname}:8080`;
@@ -66,7 +84,7 @@ function App() {
         const data = JSON.parse(event.data);
         addLog(`RECV ← ${JSON.stringify(data)}`);
 
-        await handleEvent(data);
+        handleEvent(data);
 
         // TODO: handle event types and update board
       } catch (error) {
@@ -79,7 +97,7 @@ function App() {
       ws.close();
       wsRef.current = null;
     };
-  }, []);
+  }, [handleEvent]);
 
   function send(payload: object) {
     const ws = wsRef.current;
@@ -107,6 +125,7 @@ function App() {
     const gameId = prompt("Enter gameId to join:");
     if (!gameId) return;
     const player = prompt("Join as p1 or p2? (p1/p2)", "p2") || "p2";
+    setPlayerId(player as "p1" | "p2");
     // WS join just sets server mapping (and you could publish a JoinEvent separately)
     send({
       type: EVENT_TYPE.JOIN,
@@ -116,9 +135,10 @@ function App() {
   }
 
   function placeShip() {
-    const gameId = prompt("gameId?");
+    const gameId = activeGameId || prompt("gameId?");
     if (!gameId) return;
-    const player = prompt("player (p1/p2)", "p1") || "p1";
+
+    const player = playerId || prompt("player (p1/p2)", "p1") || "p1";
 
     const availableShips = Object.entries(shipsToPlace)
       .filter(([, toPlace]) => toPlace)
@@ -159,9 +179,10 @@ function App() {
   }
 
   function fireMove() {
-    const gameId = prompt("gameId?");
+    const gameId = activeGameId || prompt("gameId?");
     if (!gameId) return;
-    const player = prompt("player (p1/p2)", "p1") || "p1";
+
+    const player = playerId || prompt("player (p1/p2)", "p1") || "p1";
     const x = Number(prompt("x (0-9)", "0"));
     const y = Number(prompt("y (0-9)", "0"));
     send({
@@ -183,30 +204,37 @@ function App() {
       </div>
 
       <div className="mb-6 flex gap-3 justify-center">
-        <button
-          onClick={newGame}
-          className="px-4 py-2 bg-blue-500 text-white rounded"
-        >
-          New Game
-        </button>
-        <button
-          onClick={joinGame}
-          className="px-4 py-2 bg-green-500 text-white rounded"
-        >
-          Join Game
-        </button>
-        <button
-          onClick={placeShip}
-          className="px-4 py-2 bg-yellow-500 text-black rounded"
-        >
-          Place Ship
-        </button>
-        <button
-          onClick={fireMove}
-          className="px-4 py-2 bg-red-500 text-white rounded"
-        >
-          Fire Move
-        </button>
+        {!activeGameId ? (
+          <div className="flex gap-3">
+            <button
+              onClick={newGame}
+              className="px-4 py-2 bg-blue-500 text-white rounded cursor-pointer"
+            >
+              New Game
+            </button>
+            <button
+              onClick={joinGame}
+              className="px-4 py-2 bg-green-500 text-white rounded cursor-pointer"
+            >
+              Join Game
+            </button>
+          </div>
+        ) : (
+          <div className="flex gap-3">
+            <button
+              onClick={placeShip}
+              className="px-4 py-2 bg-yellow-500 text-black rounded cursor-pointer"
+            >
+              Place Ship
+            </button>
+            <button
+              onClick={fireMove}
+              className="px-4 py-2 bg-red-500 text-white rounded cursor-pointer"
+            >
+              Fire Move
+            </button>
+          </div>
+        )}
       </div>
 
       {showLogs && (

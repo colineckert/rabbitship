@@ -1,4 +1,4 @@
-import { createEmptyBoard } from "./board";
+import { createEmptyBoard } from "./utils";
 import { placeShipsRandomly } from "./placement";
 import type { GameMode, GamePhase, GameState } from "./types";
 

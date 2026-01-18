@@ -13,6 +13,7 @@ export function createPlacementHandler(
   return async function placementHandler(
     placement: PlaceShipEvent,
   ): Promise<AckType> {
+    console.log("=== Received PlaceShip event ===", placement);
     try {
       const gameId = placement.gameId;
       if (!gameId) {
@@ -45,13 +46,18 @@ export function createPlacementHandler(
       }
 
       try {
-        const routing = EVENT_TO_ROUTING[EVENT_TYPE.PLACE_SHIP];
+        const routing = EVENT_TO_ROUTING[EVENT_TYPE.PLACE_SHIP_RESULT];
         await publishMsgPack(confirmCh, EXCHANGE.GAME_EVENTS, routing, {
           ...placement,
           playerBoard:
             placement.player === "p1" ? state.p1.grid : state.p2.grid,
           success,
         });
+
+        console.log(
+          `[PLACE SHIP RESULT PUBLISHED] game=${gameId} player=${placement.player} success=${success}`,
+        );
+
         return AckType.Ack;
       } catch (err) {
         console.error("Failed to publish place ship result:", err);
