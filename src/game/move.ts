@@ -93,6 +93,7 @@ export function handleMove(
     shipsSunk: { p1: state.p1.shipsSunk, p2: state.p2.shipsSunk },
     p1Board: state.p1.grid,
     p2Board: state.p2.grid,
+    player: move.player,
     nextTurn: move.player === "p1" ? "p2" : "p1",
   };
 

@@ -1,6 +1,11 @@
 import "./App.css";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { EVENT_TYPE, type GameEvent, type ShipKey } from "../game/types";
+import {
+  EVENT_TYPE,
+  type GameEvent,
+  type PlayerId,
+  type ShipKey,
+} from "../game/types";
 import { Board } from "./components/Board";
 type LogEntry = { time: string; text: string };
 
@@ -17,7 +22,7 @@ function App() {
   const showLogs = import.meta.env.DEV;
 
   const [activeGameId, setActiveGameId] = useState<string | null>(null);
-  const [playerId, setPlayerId] = useState<"p1" | "p2" | null>(null);
+  const playerId = useRef<PlayerId | null>(null);
   const [shipsToPlace, setShipsToPlace] = useState({
     carrier: true,
     battleship: true,
@@ -29,37 +34,43 @@ function App() {
   const playerBoard = useRef<string[][]>(
     Array.from({ length: 10 }, () => Array(10).fill("empty")),
   );
+  const opponentBoard = useRef<string[][]>(
+    Array.from({ length: 10 }, () => Array(10).fill("empty")),
+  );
 
   function addLog(text: string) {
     setLogs((s) => [{ time: now(), text }, ...s].slice(0, 200));
-    // also console.log for server-side trace
     console.log(text);
   }
 
   // Handle incoming events from server
-  const handleEvent = useCallback(
-    (data: GameEvent) => {
-      // TODO: expand handling based on event types with proper typing
-      console.log("Handling event:", data);
+  const handleEvent = useCallback((data: GameEvent) => {
+    // TODO: expand handling based on event types with proper typing
+    console.log("Handling event:", data);
 
-      if (
-        data.type === EVENT_TYPE.GAME_CREATED ||
-        data.type === EVENT_TYPE.PLAYER_JOINED
-      ) {
-        console.log("*** Game created with ID:", data.gameId);
-        setActiveGameId(data.gameId);
-      }
-      if (data.type === EVENT_TYPE.PLACE_SHIP_RESULT) {
-        console.log("*** Updating player board from event ***");
-        playerBoard.current = data.playerBoard;
-      }
-      if (data.type === EVENT_TYPE.MOVE_RESULT) {
-        console.log("*** Updating player board from move result ***");
-        playerBoard.current = playerId === "p1" ? data.p1Board : data.p2Board;
-      }
-    },
-    [playerId],
-  );
+    if (
+      data.type === EVENT_TYPE.GAME_CREATED ||
+      data.type === EVENT_TYPE.PLAYER_JOINED
+    ) {
+      console.log("*** Game created with ID:", data.gameId);
+      setActiveGameId(data.gameId);
+    }
+    if (data.type === EVENT_TYPE.PLACE_SHIP_RESULT) {
+      console.log("*** Updating player board from event ***");
+      playerBoard.current = data.playerBoard;
+    }
+    if (data.type === EVENT_TYPE.MOVE_RESULT) {
+      console.log("*** Updating player board from move result ***", {
+        data,
+        playerId,
+      });
+
+      playerBoard.current =
+        playerId.current === "p1" ? data.p1Board : data.p2Board;
+      opponentBoard.current =
+        playerId.current === "p1" ? data.p2Board : data.p1Board;
+    }
+  }, []);
 
   useEffect(() => {
     const url = `ws://${location.hostname}:8080`;
@@ -119,13 +130,15 @@ function App() {
       // wsId optional (server will attach based on socket)
       mode: "multiplayer",
     });
+
+    playerId.current = player as PlayerId;
   }
 
   function joinGame() {
     const gameId = prompt("Enter gameId to join:");
     if (!gameId) return;
     const player = prompt("Join as p1 or p2? (p1/p2)", "p2") || "p2";
-    setPlayerId(player as "p1" | "p2");
+    playerId.current = player as PlayerId;
     // WS join just sets server mapping (and you could publish a JoinEvent separately)
     send({
       type: EVENT_TYPE.JOIN,
@@ -138,7 +151,7 @@ function App() {
     const gameId = activeGameId || prompt("gameId?");
     if (!gameId) return;
 
-    const player = playerId || prompt("player (p1/p2)", "p1") || "p1";
+    const player = playerId.current || prompt("player (p1/p2)", "p1") || "p1";
 
     const availableShips = Object.entries(shipsToPlace)
       .filter(([, toPlace]) => toPlace)
@@ -182,7 +195,7 @@ function App() {
     const gameId = activeGameId || prompt("gameId?");
     if (!gameId) return;
 
-    const player = playerId || prompt("player (p1/p2)", "p1") || "p1";
+    const player = playerId.current || prompt("player (p1/p2)", "p1") || "p1";
     const x = Number(prompt("x (0-9)", "0"));
     const y = Number(prompt("y (0-9)", "0"));
     send({
@@ -237,6 +250,8 @@ function App() {
         )}
       </div>
 
+      {/* TODO: if no activeGameId, show availalbe game buttons */}
+
       {showLogs && (
         <div className="mb-6">
           <h2 className="font-semibold">Logs</h2>
@@ -268,8 +283,15 @@ function App() {
         </div>
       )}
 
-      <div className="mt-8 flex justify-center">
-        <Board playerBoard={playerBoard.current} />
+      <div className="mt-8 flex gap-8 justify-center">
+        <div>
+          <h2 className="text-center text-xl font-bold mb-4">Player Board</h2>
+          <Board playerBoard={playerBoard.current} />
+        </div>
+        <div>
+          <h2 className="text-center text-xl font-bold mb-4">Opponent Board</h2>
+          <Board playerBoard={opponentBoard.current} />
+        </div>
       </div>
     </div>
   );

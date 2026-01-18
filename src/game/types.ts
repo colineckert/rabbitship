@@ -183,6 +183,7 @@ export interface MoveResultEvent {
   y: number;
   hit: boolean;
   sunkShip?: ShipKey;
+  player: PlayerId;
   nextTurn: PlayerId;
   p1Board: string[][]; // Opponent view for P1
   p2Board: string[][]; // Opponent view for P2
