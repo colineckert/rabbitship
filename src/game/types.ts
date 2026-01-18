@@ -125,6 +125,12 @@ export interface JoinEvent {
   gameId: string;
 }
 
+export interface PlayerJoinedEvent {
+  type: typeof EVENT_TYPE.PLAYER_JOINED;
+  gameId: string;
+  player: PlayerId;
+}
+
 export interface CreateGameEvent {
   type: typeof EVENT_TYPE.CREATE_GAME;
   player: PlayerId; // requested player slot (p1/p2)
@@ -153,6 +159,7 @@ export interface PlaceShipEvent {
 export interface PlaceShipResultEvent {
   gameId: string;
   type: typeof EVENT_TYPE.PLACE_SHIP_RESULT;
+  success: boolean;
   player: PlayerId;
   ship: ShipKey; // 'carrier' | 'battleship' | ...
   x: number;
@@ -184,6 +191,7 @@ export interface MoveResultEvent {
 
 export type GameEvent =
   | JoinEvent
+  | PlayerJoinedEvent
   | CreateGameEvent
   | GameCreatedEvent
   | PlaceShipEvent

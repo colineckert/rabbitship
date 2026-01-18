@@ -44,7 +44,7 @@ function App() {
 
       if (
         data.type === EVENT_TYPE.GAME_CREATED ||
-        data.type === EVENT_TYPE.JOIN
+        data.type === EVENT_TYPE.PLAYER_JOINED
       ) {
         console.log("*** Game created with ID:", data.gameId);
         setActiveGameId(data.gameId);

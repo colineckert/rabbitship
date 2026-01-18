@@ -108,9 +108,9 @@ export function createJoinGameHandler(
 
       // Publish join event for subscribers
       try {
-        const routing = EVENT_TO_ROUTING[EVENT_TYPE.JOIN];
+        const routing = EVENT_TO_ROUTING[EVENT_TYPE.PLAYER_JOINED];
         const payloadOut = {
-          type: EVENT_TYPE.JOIN,
+          type: EVENT_TYPE.PLAYER_JOINED,
           gameId,
           player,
           wsId,

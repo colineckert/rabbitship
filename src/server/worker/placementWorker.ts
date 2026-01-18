@@ -2,7 +2,11 @@ import type amqp from "amqplib";
 import type { GameEngine } from "../../game/engine";
 import { AckType } from "../rabbit/subscribe";
 import { handlePlaceShip } from "../../game/placement";
-import { EVENT_TYPE, type PlaceShipEvent } from "../../game/types";
+import {
+  EVENT_TYPE,
+  type PlaceShipEvent,
+  type PlaceShipResultEvent,
+} from "../../game/types";
 import { EVENT_TO_ROUTING, EXCHANGE } from "../rabbit/constants";
 import { publishMsgPack } from "../rabbit/publish";
 
@@ -27,15 +31,15 @@ export function createPlacementHandler(
         return AckType.NackDiscard;
       }
 
-      let success = false;
+      let result: PlaceShipResultEvent | null = null;
       try {
-        success = handlePlaceShip(state, placement);
+        result = handlePlaceShip(state, placement);
       } catch (err) {
         console.error("handlePlaceShip failed:", err);
         return AckType.NackDiscard;
       }
 
-      if (success) {
+      if (result && result.success) {
         console.log(
           `[SHIP PLACED] game=${gameId} player=${placement.player} ship=${placement.ship}`,
         );
@@ -47,15 +51,10 @@ export function createPlacementHandler(
 
       try {
         const routing = EVENT_TO_ROUTING[EVENT_TYPE.PLACE_SHIP_RESULT];
-        await publishMsgPack(confirmCh, EXCHANGE.GAME_EVENTS, routing, {
-          ...placement,
-          playerBoard:
-            placement.player === "p1" ? state.p1.grid : state.p2.grid,
-          success,
-        });
+        await publishMsgPack(confirmCh, EXCHANGE.GAME_EVENTS, routing, result);
 
         console.log(
-          `[PLACE SHIP RESULT PUBLISHED] game=${gameId} player=${placement.player} success=${success}`,
+          `[PLACE SHIP RESULT PUBLISHED] game=${gameId} player=${placement.player} success=${result.success}`,
         );
 
         return AckType.Ack;

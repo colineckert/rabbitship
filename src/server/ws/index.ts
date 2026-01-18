@@ -43,7 +43,7 @@ const handlers: Record<
       await publishMsgPack(
         ch,
         EXCHANGE.GAME_EVENTS,
-        EVENT_TO_ROUTING[EVENT_TYPE.CREATE_GAME] ?? ROUTING_KEY.GAME_CREATED,
+        EVENT_TO_ROUTING[EVENT_TYPE.CREATE_GAME] ?? ROUTING_KEY.CREATE_GAME,
         {
           type: EVENT_TYPE.CREATE_GAME,
           player: data.player,
@@ -78,7 +78,7 @@ const handlers: Record<
       await publishMsgPack(
         ch,
         EXCHANGE.GAME_EVENTS,
-        EVENT_TO_ROUTING[EVENT_TYPE.CREATE_GAME] ?? ROUTING_KEY.GAME_CREATED,
+        EVENT_TO_ROUTING[EVENT_TYPE.JOIN] ?? ROUTING_KEY.GAME_JOIN,
         {
           type: EVENT_TYPE.JOIN,
           gameId: data.gameId,
@@ -115,7 +115,7 @@ const handlers: Record<
       await publishMsgPack(
         ch,
         EXCHANGE.GAME_EVENTS,
-        EVENT_TO_ROUTING[EVENT_TYPE.PLACE_SHIP] ?? ROUTING_KEY.GAME_ANY,
+        EVENT_TO_ROUTING[EVENT_TYPE.PLACE_SHIP] ?? ROUTING_KEY.PLACE_SHIP,
         {
           type: EVENT_TYPE.PLACE_SHIP,
           gameId,

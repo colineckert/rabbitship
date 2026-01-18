@@ -6,13 +6,15 @@ import {
   type GameState,
   type PlaceShipEvent,
   type ShipKey,
+  type PlaceShipResultEvent,
+  EVENT_TYPE,
 } from "./types";
 
 // update game state when user places ship
 export function handlePlaceShip(
   gs: GameState,
   placement: PlaceShipEvent,
-): boolean {
+): PlaceShipResultEvent {
   console.log();
   console.log("==== Ship Placement Detected ====");
 
@@ -31,6 +33,13 @@ export function handlePlaceShip(
     placement.dir,
   );
 
+  const result: PlaceShipResultEvent = {
+    ...placement,
+    type: EVENT_TYPE.PLACE_SHIP_RESULT,
+    success,
+    playerBoard: playerState.grid,
+  };
+
   if (!success) {
     console.log("Ship placement failed due to invalid position or overlap.");
     throw new Error("Invalid ship placement");
@@ -41,7 +50,7 @@ export function handlePlaceShip(
     `${placement.player} successfully placed ${placement.ship}. Total ships placed: ${playerState.shipsPlaced}`,
   );
 
-  return success;
+  return result;
 }
 
 export function tryPlaceShip(
