@@ -12,6 +12,7 @@ export function createMoveHandler(
   confirmCh: amqp.ConfirmChannel,
 ) {
   return async function moveHandler(move: MoveEvent): Promise<AckType> {
+    console.log("===== Received Move event =====", move);
     try {
       const gameId = move.gameId;
       if (!gameId) {
@@ -25,6 +26,8 @@ export function createMoveHandler(
         return AckType.NackDiscard;
       }
 
+      console.log("====== Game State [Move] =======", state);
+
       let result = null;
       try {
         result = handleMove(state as GameState, move);
@@ -32,6 +35,8 @@ export function createMoveHandler(
         console.error("handleMove failed:", err);
         return AckType.NackDiscard;
       }
+
+      console.log("====== Game State [Move Result] =======", { state, result });
 
       if (!result) return AckType.Ack;
 

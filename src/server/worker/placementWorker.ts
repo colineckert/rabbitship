@@ -17,7 +17,7 @@ export function createPlacementHandler(
   return async function placementHandler(
     placement: PlaceShipEvent,
   ): Promise<AckType> {
-    console.log("=== Received PlaceShip event ===", placement);
+    console.log("===== Received PlaceShip event =====", placement);
     try {
       const gameId = placement.gameId;
       if (!gameId) {
@@ -31,6 +31,8 @@ export function createPlacementHandler(
         return AckType.NackDiscard;
       }
 
+      console.log("====== Game State [Place Ship] =======", state);
+
       let result: PlaceShipResultEvent | null = null;
       try {
         result = handlePlaceShip(state, placement);
@@ -38,6 +40,11 @@ export function createPlacementHandler(
         console.error("handlePlaceShip failed:", err);
         return AckType.NackDiscard;
       }
+
+      console.log("====== Game State [Place Ship Result] =======", {
+        state,
+        result,
+      });
 
       if (result && result.success) {
         console.log(

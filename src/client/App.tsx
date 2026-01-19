@@ -7,16 +7,16 @@ import {
   type ShipKey,
 } from "../game/types";
 import { Board } from "./components/Board";
+
 type LogEntry = { time: string; text: string };
 
 function now() {
   return new Date().toISOString();
 }
 
-// TODO: consider global store for tracking games
-
 function App() {
   const [wsState, setWsState] = useState("DISCONNECTED");
+  const [wsId, setWsId] = useState<string | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const wsRef = useRef<WebSocket | null>(null);
   const showLogs = import.meta.env.DEV;
@@ -56,15 +56,14 @@ function App() {
       setActiveGameId(data.gameId);
     }
     if (data.type === EVENT_TYPE.PLACE_SHIP_RESULT) {
-      console.log("*** Updating player board from event ***");
-      playerBoard.current = data.playerBoard;
+      if (data.success && data.player === playerId.current) {
+        playerBoard.current = data.playerBoard;
+        setShipsToPlace((s) => ({ ...s, [data.ship]: false }));
+      } else {
+        console.warn("Place ship failed or for other player", data);
+      }
     }
     if (data.type === EVENT_TYPE.MOVE_RESULT) {
-      console.log("*** Updating player board from move result ***", {
-        data,
-        playerId,
-      });
-
       playerBoard.current =
         playerId.current === "p1" ? data.p1Board : data.p2Board;
       opponentBoard.current =
@@ -94,6 +93,10 @@ function App() {
       try {
         const data = JSON.parse(event.data);
         addLog(`RECV ← ${JSON.stringify(data)}`);
+
+        if (data.type === "welcome" && data.wsId) {
+          setWsId(data.wsId);
+        }
 
         handleEvent(data);
 
@@ -174,8 +177,6 @@ function App() {
       alert("Invalid ship key, please try again.");
     }
 
-    setShipsToPlace((s) => ({ ...s, [ship]: false }));
-
     const x = Number(prompt("x (0-9)", "0"));
     const y = Number(prompt("y (0-9)", "0"));
     const dir = prompt("dir (h/v)", "h") || "h";
@@ -210,10 +211,11 @@ function App() {
   return (
     <div className="p-6">
       <div className="mb-8 text-center">
-        <h1 className="pb-4 font-bold">RabbitShip — WS Test</h1>
+        <h1 className="pb-4 font-bold">RabbitShip</h1>
         <div>
-          WS status: <strong>{wsState}</strong>
+          WS Status: <strong>{wsState}</strong>
         </div>
+        <span className="font-light text-sm">WS ID: {wsId}</span>
       </div>
 
       <div className="mb-6 flex gap-3 justify-center">
@@ -243,6 +245,8 @@ function App() {
             <button
               onClick={fireMove}
               className="px-4 py-2 bg-red-500 text-white rounded cursor-pointer"
+              // disable firing moves until all ships placed
+              disabled={Object.values(shipsToPlace).some((v) => v)}
             >
               Fire Move
             </button>
@@ -254,7 +258,7 @@ function App() {
 
       {showLogs && (
         <div className="mb-6">
-          <h2 className="font-semibold">Logs</h2>
+          <h2 className="font-semibold text-lg">Logs</h2>
           <div
             style={{
               maxHeight: 320,
