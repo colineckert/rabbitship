@@ -18,12 +18,6 @@ export function handlePlaceShip(
   console.log();
   console.log("==== Ship Placement Detected ====");
 
-  const shipLength = ShipLengthMap[placement.ship];
-
-  console.log(
-    `${placement.player} places ${placement.ship} of length ${shipLength} at coordinates [${placement.x}, ${placement.y}] facing ${placement.dir}`,
-  );
-
   const playerState = placement.player === "p1" ? gs.p1 : gs.p2;
   const success = tryPlaceShip(
     playerState.grid,
@@ -31,6 +25,11 @@ export function handlePlaceShip(
     placement.y,
     placement.ship,
     placement.dir,
+  );
+
+  const shipLength = ShipLengthMap[placement.ship];
+  console.log(
+    `Success: ${success} *** ${placement.player} places ${placement.ship} of length ${shipLength} at coordinates [${placement.x}, ${placement.y}] facing ${placement.dir}`,
   );
 
   const result: PlaceShipResultEvent = {
@@ -49,6 +48,7 @@ export function handlePlaceShip(
   console.log(
     `${placement.player} successfully placed ${placement.ship}. Total ships placed: ${playerState.shipsPlaced}`,
   );
+  console.log("* Updated Player State:", playerState);
 
   return result;
 }

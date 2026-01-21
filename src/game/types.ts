@@ -170,6 +170,7 @@ export interface PlaceShipResultEvent {
 
 export interface MoveEvent {
   gameId: string;
+  wsId: string;
   type: typeof EVENT_TYPE.MOVE;
   player: PlayerId;
   x: number;

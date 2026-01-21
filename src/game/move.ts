@@ -12,18 +12,55 @@ function isValidCoord(x: number, y: number): boolean {
   return x >= 0 && x < 10 && y >= 0 && y < 10;
 }
 
+function prepareBoardViews(
+  move: MoveEvent,
+  gs: GameState,
+): {
+  p1Board: string[][];
+  p2Board: string[][];
+} {
+  const p1Board = gs.p1.grid.map((row) => [...row]);
+  const p2Board = gs.p2.grid.map((row) => [...row]);
+
+  // Determine which player is requesting the view
+  const player = move.player;
+
+  // Hide opponent ships
+  if (player === "p1") {
+    for (let y = 0; y < 10; y++) {
+      for (let x = 0; x < 10; x++) {
+        const cell = p2Board[y][x];
+        if (cell !== "empty" && cell !== "miss" && !cell.endsWith("-hit")) {
+          p2Board[y][x] = "empty";
+        }
+      }
+    }
+  } else {
+    for (let y = 0; y < 10; y++) {
+      for (let x = 0; x < 10; x++) {
+        const cell = p1Board[y][x];
+        if (cell !== "empty" && cell !== "miss" && !cell.endsWith("-hit")) {
+          p1Board[y][x] = "empty";
+        }
+      }
+    }
+  }
+
+  return { p1Board, p2Board };
+}
+
 export type ShotResult =
   | { hit: false; sunkShip?: never }
   | { hit: true; sunkShip?: ShipKey };
 
 function resolveShot(
-  state: GameState,
+  gs: GameState,
   shooter: PlayerId,
   x: number,
   y: number,
 ): ShotResult {
-  const opponent = shooter === "p1" ? state.p2 : state.p1;
-  const shooterBoard = shooter === "p1" ? state.p1 : state.p2;
+  const opponent = shooter === "p1" ? gs.p2 : gs.p1;
+  const shooterBoard = shooter === "p1" ? gs.p1 : gs.p2;
 
   const coordKey = `${x},${y}`;
   if (shooterBoard.shots.has(coordKey)) {
@@ -66,7 +103,7 @@ function resolveShot(
 // active game and user fires a shot;
 // determine if hit or miss and update game state
 export function handleMove(
-  state: GameState,
+  gs: GameState,
   move: MoveEvent,
 ): MoveResultEvent | null {
   console.log();
@@ -75,13 +112,27 @@ export function handleMove(
     `${move.player} fires shot at coordinates [${move.x}, ${move.y}]`,
   );
 
+  if (gs.turn !== move.player) {
+    console.log("Not this player's turn.");
+    throw new Error("Invalid: Not this player's turn.");
+    // TODO: return null or publish event indicating invalid turn?
+  }
+
   const isValidMove = isValidCoord(move.x, move.y);
   if (!isValidMove) {
     console.log("Invalid move: coordinates out of bounds.");
     throw new Error("Invalid move: coordinates out of bounds.");
+    // TODO: return null or publish event indicating invalid turn?
   }
 
-  const shotResult = resolveShot(state, move.player, move.x, move.y);
+  const shotResult = resolveShot(gs, move.player, move.x, move.y);
+
+  // Update player turn
+  gs.turn = move.player === "p1" ? "p2" : "p1";
+
+  // Sanitize board views before sending
+  // This has to be based on wsId to ensure right wsClient gets correct view
+  const { p1Board, p2Board } = prepareBoardViews(move, gs);
 
   const moveResult: MoveResultEvent = {
     gameId: move.gameId,
@@ -90,9 +141,9 @@ export function handleMove(
     y: move.y,
     hit: shotResult.hit,
     sunkShip: shotResult.sunkShip,
-    shipsSunk: { p1: state.p1.shipsSunk, p2: state.p2.shipsSunk },
-    p1Board: state.p1.grid,
-    p2Board: state.p2.grid,
+    shipsSunk: { p1: gs.p1.shipsSunk, p2: gs.p2.shipsSunk },
+    p1Board,
+    p2Board,
     player: move.player,
     nextTurn: move.player === "p1" ? "p2" : "p1",
   };

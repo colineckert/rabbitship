@@ -46,7 +46,7 @@ export function createPlacementHandler(
         result,
       });
 
-      if (result && result.success) {
+      if (result?.success) {
         console.log(
           `[SHIP PLACED] game=${gameId} player=${placement.player} ship=${placement.ship}`,
         );
