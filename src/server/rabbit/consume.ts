@@ -76,6 +76,10 @@ export async function startConsumers() {
           if (!moveHandler) return AckType.NackDiscard;
           return moveHandler(data);
         }
+        if (data.type === EVENT_TYPE.GAME_OVER) {
+          // GAME_OVER events are just broadcast events, no processing needed
+          return AckType.Ack;
+        }
         return AckType.Ack;
       },
       (b) => decode(b),

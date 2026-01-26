@@ -1,12 +1,12 @@
-import './App.css';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import "./App.css";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   EVENT_TYPE,
   type GameEvent,
   type PlayerId,
   type ShipKey,
-} from '../game/types';
-import { Board } from './components/Board';
+} from "../game/types";
+import { Board } from "./components/Board";
 
 type LogEntry = { time: string; text: string };
 
@@ -15,7 +15,7 @@ function now() {
 }
 
 function App() {
-  const [wsState, setWsState] = useState('DISCONNECTED');
+  const [wsState, setWsState] = useState("DISCONNECTED");
   const [wsId, setWsId] = useState<string | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const wsRef = useRef<WebSocket | null>(null);
@@ -32,10 +32,10 @@ function App() {
   });
 
   const playerBoard = useRef<string[][]>(
-    Array.from({ length: 10 }, () => Array(10).fill('empty')),
+    Array.from({ length: 10 }, () => Array(10).fill("empty")),
   );
   const opponentBoard = useRef<string[][]>(
-    Array.from({ length: 10 }, () => Array(10).fill('empty')),
+    Array.from({ length: 10 }, () => Array(10).fill("empty")),
   );
 
   function addLog(text: string) {
@@ -46,31 +46,50 @@ function App() {
   // Handle incoming events from server
   const handleEvent = useCallback((data: GameEvent) => {
     // TODO: expand handling based on event types with proper typing
-    console.log('Handling event:', data);
+    console.log("Handling event:", data);
 
     if (
       data.type === EVENT_TYPE.GAME_CREATED ||
       data.type === EVENT_TYPE.PLAYER_JOINED
     ) {
-      console.log('*** Game created with ID:', data.gameId);
+      console.log("*** Game created with ID:", data.gameId);
       setActiveGameId(data.gameId);
     }
     if (data.type === EVENT_TYPE.PLACE_SHIP_RESULT) {
-      if (data.success && data.player === playerId.current) {
-        playerBoard.current = data.playerBoard;
-        setShipsToPlace((s) => ({ ...s, [data.ship]: false }));
+      if (data.success) {
+        if (data.player === playerId.current) {
+          playerBoard.current = data.playerBoard;
+          setShipsToPlace((s) => ({ ...s, [data.ship]: false }));
+        }
       } else {
-        alert('Failed to place ship');
-        console.warn('Place ship failed or for other player', data);
+        alert("Failed to place ship");
+        console.warn("Place ship failed:", data);
       }
     }
     if (data.type === EVENT_TYPE.MOVE_RESULT) {
-      if (data.player === playerId.current) {
-        playerBoard.current =
-          playerId.current === 'p1' ? data.p1Board : data.p2Board;
-        opponentBoard.current =
-          playerId.current === 'p1' ? data.p2Board : data.p1Board;
+      // Always update boards based on current player's perspective
+      if (playerId.current === "p1") {
+        playerBoard.current = data.p1Board; // P1's view
+        opponentBoard.current = data.p2Board; // P1's view of P2's board
+      } else {
+        playerBoard.current = data.p2Board; // P2's view
+        opponentBoard.current = data.p1Board; // P2's view of P1's board
       }
+    }
+    if (data.type === EVENT_TYPE.GAME_OVER) {
+      alert("Game Over!");
+      // Update final boards and show game over message
+      if (playerId.current === "p1") {
+        playerBoard.current = data.finalBoards.p1Board;
+        opponentBoard.current = data.finalBoards.p2Board;
+      } else {
+        playerBoard.current = data.finalBoards.p2Board;
+        opponentBoard.current = data.finalBoards.p1Board;
+      }
+
+      const winnerText =
+        data.winner === playerId.current ? "You won!" : `${data.winner} won!`;
+      alert(`Game Over!\n${winnerText}\nTotal moves: ${data.totalMoves}`);
     }
   }, []);
 
@@ -81,15 +100,15 @@ function App() {
     wsRef.current = ws;
 
     ws.onopen = () => {
-      setWsState('OPEN');
-      addLog('WS open');
+      setWsState("OPEN");
+      addLog("WS open");
     };
     ws.onclose = () => {
-      setWsState('CLOSED');
-      addLog('WS closed');
+      setWsState("CLOSED");
+      addLog("WS closed");
     };
     ws.onerror = (error) => {
-      addLog('WS error');
+      addLog("WS error");
       console.error(error);
     };
     ws.onmessage = async (event) => {
@@ -97,7 +116,7 @@ function App() {
         const data = JSON.parse(event.data);
         addLog(`RECV ← ${JSON.stringify(data)}`);
 
-        if (data.type === 'welcome' && data.wsId) {
+        if (data.type === "welcome" && data.wsId) {
           setWsId(data.wsId);
         }
 
@@ -105,7 +124,7 @@ function App() {
 
         // TODO: handle event types and update board
       } catch (error) {
-        console.error('Failed to parse WS message', error);
+        console.error("Failed to parse WS message", error);
         addLog(`RECV ← ${String(event.data)}`);
       }
     };
@@ -119,7 +138,7 @@ function App() {
   function send(payload: object) {
     const ws = wsRef.current;
     if (!ws || ws.readyState !== WebSocket.OPEN) {
-      addLog('WS not open');
+      addLog("WS not open");
       return;
     }
     const text = JSON.stringify(payload);
@@ -129,21 +148,21 @@ function App() {
 
   // Quick helpers
   function newGame() {
-    const player = 'p1';
+    const player = "p1";
     send({
       type: EVENT_TYPE.CREATE_GAME,
       player,
       // wsId optional (server will attach based on socket)
-      mode: 'multiplayer',
+      mode: "multiplayer",
     });
 
     playerId.current = player as PlayerId;
   }
 
   function joinGame() {
-    const gameId = prompt('Enter gameId to join:');
+    const gameId = prompt("Enter gameId to join:");
     if (!gameId) return;
-    const player = prompt('Join as p1 or p2? (p1/p2)', 'p2') || 'p2';
+    const player = prompt("Join as p1 or p2? (p1/p2)", "p2") || "p2";
     playerId.current = player as PlayerId;
     // WS join just sets server mapping (and you could publish a JoinEvent separately)
     send({
@@ -154,35 +173,35 @@ function App() {
   }
 
   function placeShip() {
-    const gameId = activeGameId || prompt('gameId?');
+    const gameId = activeGameId || prompt("gameId?");
     if (!gameId) return;
 
-    const player = playerId.current || prompt('player (p1/p2)', 'p1') || 'p1';
+    const player = playerId.current || prompt("player (p1/p2)", "p1") || "p1";
 
     const availableShips = Object.entries(shipsToPlace)
       .filter(([, toPlace]) => toPlace)
       .map(([shipKey]) => shipKey);
     if (availableShips.length === 0) {
-      alert('No ships left to place!');
+      alert("No ships left to place!");
       return;
     }
 
     let ship: ShipKey;
     while (true) {
       const shipInput = prompt(
-        `ship key (${availableShips.join('/')})`,
+        `ship key (${availableShips.join("/")})`,
         availableShips[0],
       );
       if (shipInput && availableShips.includes(shipInput)) {
         ship = shipInput as ShipKey;
         break;
       }
-      alert('Invalid ship key, please try again.');
+      alert("Invalid ship key, please try again.");
     }
 
-    const x = Number(prompt('x (0-9)', '0'));
-    const y = Number(prompt('y (0-9)', '0'));
-    const dir = prompt('dir (h/v)', 'h') || 'h';
+    const x = Number(prompt("x (0-9)", "0"));
+    const y = Number(prompt("y (0-9)", "0"));
+    const dir = prompt("dir (h/v)", "h") || "h";
 
     send({
       type: EVENT_TYPE.PLACE_SHIP,
@@ -196,12 +215,12 @@ function App() {
   }
 
   function fireMove() {
-    const gameId = activeGameId || prompt('gameId?');
+    const gameId = activeGameId || prompt("gameId?");
     if (!gameId) return;
 
-    const player = playerId.current || prompt('player (p1/p2)', 'p1') || 'p1';
-    const x = Number(prompt('x (0-9)', '0'));
-    const y = Number(prompt('y (0-9)', '0'));
+    const player = playerId.current || prompt("player (p1/p2)", "p1") || "p1";
+    const x = Number(prompt("x (0-9)", "0"));
+    const y = Number(prompt("y (0-9)", "0"));
     send({
       type: EVENT_TYPE.MOVE,
       gameId,
@@ -265,9 +284,9 @@ function App() {
           <div
             style={{
               maxHeight: 320,
-              overflow: 'auto',
-              background: '#0f172a',
-              color: '#e2e8f0',
+              overflow: "auto",
+              background: "#0f172a",
+              color: "#e2e8f0",
               padding: 8,
             }}
           >
@@ -275,13 +294,13 @@ function App() {
               <div
                 key={i}
                 className="grid grid-cols-7 gap-2"
-                style={{ fontFamily: 'monospace', fontSize: 12 }}
+                style={{ fontFamily: "monospace", fontSize: 12 }}
               >
                 <span
                   className="col-span-2 text-center"
-                  style={{ color: '#94a3b8' }}
+                  style={{ color: "#94a3b8" }}
                 >
-                  {l.time}{' '}
+                  {l.time}{" "}
                 </span>
                 <span className="col-span-5 text-left">- {l.text}</span>
               </div>

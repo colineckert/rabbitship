@@ -113,6 +113,7 @@ export const EVENT_TYPE = {
   PLACE_SHIP_RESULT: "place-ship-result",
   MOVE: "move",
   MOVE_RESULT: "move-result",
+  GAME_OVER: "game-over",
 } as const;
 
 export type EventType = (typeof EVENT_TYPE)[keyof typeof EVENT_TYPE];
@@ -191,6 +192,18 @@ export interface MoveResultEvent {
   shipsSunk: { p1: number; p2: number };
 }
 
+export interface GameOverEvent {
+  gameId: string;
+  type: typeof EVENT_TYPE.GAME_OVER;
+  winner: PlayerId;
+  finalBoards: {
+    p1Board: string[][]; // Final board view for P1
+    p2Board: string[][]; // Final board view for P2
+  };
+  shipsSunk: { p1: number; p2: number };
+  totalMoves: number;
+}
+
 export type GameEvent =
   | JoinEvent
   | PlayerJoinedEvent
@@ -199,4 +212,5 @@ export type GameEvent =
   | PlaceShipEvent
   | PlaceShipResultEvent
   | MoveEvent
-  | MoveResultEvent;
+  | MoveResultEvent
+  | GameOverEvent;
