@@ -1,7 +1,11 @@
 import { serve } from 'bun';
 import { getConfirmChannel, getConnection } from '../rabbit/connection';
 import { QUEUE } from '../rabbit/constants';
-import { startConsumers, stopConsumers } from '../rabbit/consume';
+import {
+  startConsumers,
+  stopConsumers,
+  getGameEngine,
+} from '../rabbit/consume';
 import { publishTest } from '../rabbit/publish';
 import { initTopology } from '../rabbit/setup';
 import { startWsServer, stopWsServer } from '../ws';
@@ -23,46 +27,84 @@ startup().catch((err) => {
   process.exit(1);
 });
 
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+};
+
+function addCorsHeaders(response: Response): Response {
+  const newHeaders = new Headers(response.headers);
+  Object.entries(CORS_HEADERS).forEach(([key, value]) => {
+    newHeaders.set(key, value);
+  });
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: newHeaders,
+  });
+}
+
 serve({
   port: HTTP_PORT,
   async fetch(req) {
     const url = new URL(req.url);
 
-    if (url.pathname === '/health') {
-      return new Response('OK', { status: 200 });
-    }
-
-    if (url.pathname === '/debug/rabbitmq') {
-      try {
-        await getConnection();
-        return new Response('RabbitMQ: Connected', { status: 200 });
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      } catch (err: any) {
-        return new Response(`RabbitMQ: ${err.message}`, { status: 500 });
-      }
-    }
-
-    if (url.pathname === '/debug/publish') {
-      await publishTest();
-      return new Response(`Test message sent → ${QUEUE.DEBUG}`, {
-        status: 200,
+    // Handle preflight requests
+    if (req.method === 'OPTIONS') {
+      return new Response(null, {
+        status: 204,
+        headers: CORS_HEADERS,
       });
     }
 
-    if (url.pathname === '/debug/clear') {
+    let response: Response;
+
+    if (url.pathname === '/health') {
+      response = new Response('OK', { status: 200 });
+    } else if (url.pathname === '/debug/rabbitmq') {
+      try {
+        await getConnection();
+        response = new Response('RabbitMQ: Connected', { status: 200 });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } catch (err: any) {
+        response = new Response(`RabbitMQ: ${err.message}`, { status: 500 });
+      }
+    } else if (url.pathname === '/debug/publish') {
+      await publishTest();
+      response = new Response(`Test message sent → ${QUEUE.DEBUG}`, {
+        status: 200,
+      });
+    } else if (url.pathname === '/debug/clear') {
       const conn = await getConnection();
       const ch = await conn.createChannel();
       await ch.purgeQueue(QUEUE.DEBUG);
       await ch.close();
-      return new Response(`${QUEUE.DEBUG} cleared`, { status: 200 });
+      response = new Response(`${QUEUE.DEBUG} cleared`, { status: 200 });
+    } else if (url.pathname === '/api/games') {
+      try {
+        const engine = getGameEngine();
+        const availableGames = engine.getAvailableGames();
+        response = new Response(JSON.stringify(availableGames), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      } catch (err) {
+        response = new Response(JSON.stringify({ error: String(err) }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+    } else {
+      // Serve React
+      const filePath = url.pathname === '/' ? '/index.html' : url.pathname;
+      const file = Bun.file(`./dist${filePath}`);
+      response = new Response(
+        (await file.exists()) ? file : Bun.file('./dist/index.html'),
+      );
     }
 
-    // Serve React
-    const filePath = url.pathname === '/' ? '/index.html' : url.pathname;
-    const file = Bun.file(`./dist${filePath}`);
-    return new Response(
-      (await file.exists()) ? file : Bun.file('./dist/index.html')
-    );
+    return addCorsHeaders(response);
   },
 });
 

@@ -1,23 +1,31 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { decode } from "@msgpack/msgpack";
-import type amqp from "amqplib";
-import { getConnection, getConfirmChannel } from "./connection";
-import { QUEUE } from "./constants";
-import { EVENT_TYPE } from "../../game/types";
-import { createMoveHandler } from "../worker/moveWorker";
+import { decode } from '@msgpack/msgpack';
+import type amqp from 'amqplib';
+import { getConnection, getConfirmChannel } from './connection';
+import { QUEUE } from './constants';
+import { EVENT_TYPE } from '../../game/types';
+import { createMoveHandler } from '../worker/moveWorker';
 import {
   createJoinGameHandler,
   createCreateGameHandler,
-} from "../worker/gameWorker";
-import { GameEngine } from "../../game/engine";
-import { subscribeChannel, AckType } from "./subscribe";
-import { startBroadcaster } from "./broadcaster";
-import { createPlacementHandler } from "../worker/placementWorker";
+} from '../worker/gameWorker';
+import { GameEngine } from '../../game/engine';
+import { subscribeChannel, AckType } from './subscribe';
+import { startBroadcaster } from './broadcaster';
+import { createPlacementHandler } from '../worker/placementWorker';
 
 let channel: amqp.Channel | null = null;
+let gameEngine: GameEngine | null = null;
 
 type Unsubscribe = () => Promise<void>;
 const unsubscribers: Unsubscribe[] = [];
+
+export function getGameEngine(): GameEngine {
+  if (!gameEngine) {
+    throw new Error('GameEngine not initialized. Call startConsumers() first.');
+  }
+  return gameEngine;
+}
 
 export async function startConsumers() {
   const conn = await getConnection();
@@ -27,14 +35,14 @@ export async function startConsumers() {
   await channel.prefetch(1);
 
   // Create a single GameEngine
-  const engine = new GameEngine();
+  gameEngine = new GameEngine();
   // Create a single confirm channel for publishing from handlers
   const confirmCh = await getConfirmChannel();
   // Create event handlers
-  const createHandler = createCreateGameHandler(engine, confirmCh);
-  const joinHandler = createJoinGameHandler(engine, confirmCh);
-  const placeShipHandler = createPlacementHandler(engine, confirmCh);
-  const moveHandler = createMoveHandler(engine, confirmCh);
+  const createHandler = createCreateGameHandler(gameEngine, confirmCh);
+  const joinHandler = createJoinGameHandler(gameEngine, confirmCh);
+  const placeShipHandler = createPlacementHandler(gameEngine, confirmCh);
+  const moveHandler = createMoveHandler(gameEngine, confirmCh);
 
   // subscribe debug queue
   unsubscribers.push(
@@ -42,7 +50,7 @@ export async function startConsumers() {
       channel,
       QUEUE.DEBUG,
       async (data) => {
-        console.log("\n[DEBUG]", JSON.stringify(data, null, 2));
+        console.log('\n[DEBUG]', JSON.stringify(data, null, 2));
         return AckType.Ack;
       },
       (b) => decode(b),
@@ -56,7 +64,7 @@ export async function startConsumers() {
       channel,
       QUEUE.GAME_SERVER,
       async (data) => {
-        if (!data || typeof data.type !== "string") {
+        if (!data || typeof data.type !== 'string') {
           return AckType.NackDiscard;
         }
 
@@ -90,8 +98,8 @@ export async function startConsumers() {
   // start broadcaster (binds to game.*) to forward authoritative events to WS clients
   unsubscribers.push(await startBroadcaster(channel));
 
-  console.log("\nALL SUBSCRIPTIONS ACTIVE");
-  console.log("   Ready for real-time game events!\n");
+  console.log('\nALL SUBSCRIPTIONS ACTIVE');
+  console.log('   Ready for real-time game events!\n');
 
   return channel;
 }
@@ -105,5 +113,5 @@ export async function stopConsumers() {
     await channel.close();
     channel = null;
   }
-  console.log("All consumer stopped gracefully.");
+  console.log('All consumer stopped gracefully.');
 }

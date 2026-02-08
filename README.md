@@ -64,7 +64,7 @@ graph LR
 
 ## Key Architecture Features
 
-**Message System (src/server/rabbit/):**
+**Message System (`src/server/rabbit/`):**
 
 - Topic exchange with wildcard routing (game.\*, error.#)
 - MessagePack serialization for efficient binary payloads
@@ -72,13 +72,13 @@ graph LR
 - Dead letter queues for failed messages
 - Singleton connection with auto-reconnection
 
-**WebSocket Integration (src/server/ws/):**
+**WebSocket Integration (`src/server/ws/`):**
 
 - Unique WS ID assignment and game mapping
 - Input validation for all payloads
 - Exclusive broadcaster queue for real-time updates
 
-**Worker Processing (src/server/worker/):**
+**Worker Processing (`src/server/worker/`):**
 
 - Game Worker - Game creation/joining
 - Placement Worker - Ship placement validation

@@ -1,6 +1,6 @@
-import { createEmptyBoard } from "./utils";
-import { placeShipsRandomly } from "./placement";
-import type { GameMode, GamePhase, GameState } from "./types";
+import { createEmptyBoard } from './utils';
+import { placeShipsRandomly } from './placement';
+import type { GameMode, GamePhase, GameState } from './types';
 
 export class GameEngine {
   private games: Map<string, GameState>;
@@ -13,10 +13,10 @@ export class GameEngine {
     const state: GameState = {
       id,
       mode,
-      phase: "setup" as GamePhase,
+      phase: 'setup' as GamePhase,
       createdAt: Date.now(),
-      players: { p1: null, p2: mode === "ai" ? "ai" : null },
-      turn: "p1",
+      players: { p1: null, p2: mode === 'ai' ? 'ai' : null },
+      turn: 'p1',
       winner: null,
       moves: 0,
       p1: {
@@ -35,7 +35,7 @@ export class GameEngine {
       },
     };
 
-    if (mode === "ai") {
+    if (mode === 'ai') {
       placeShipsRandomly(state.p2.grid);
       state.p2.shipsPlaced = 5;
     }
@@ -51,5 +51,19 @@ export class GameEngine {
 
   deleteGame(id: string): void {
     this.games.delete(id);
+  }
+
+  getAvailableGames(): Array<{
+    gameId: string;
+    mode: GameMode;
+    players: { p1: string | null; p2: string | null | 'ai' };
+  }> {
+    return Array.from(this.games.values())
+      .filter((game) => game.players.p1 === null || game.players.p2 === null)
+      .map((game) => ({
+        gameId: game.id,
+        mode: game.mode,
+        players: game.players,
+      }));
   }
 }
