@@ -53,7 +53,6 @@ function App() {
 
   // Handle incoming events from server
   const handleEvent = useCallback((data: GameEvent) => {
-    // TODO: expand handling based on event types with proper typing
     console.log('Handling event:', data);
 
     if (
@@ -99,29 +98,11 @@ function App() {
         data.winner === playerId.current ? 'You won!' : `${data.winner} won!`;
       alert(`Game Over!\n${winnerText}\nTotal moves: ${data.totalMoves}`);
     }
+    if (data.type === EVENT_TYPE.GAMES_UPDATE) {
+      setAvailableGames(data.games);
+      addLog(`Updated: ${data.games.length} available games`);
+    }
   }, []);
-
-  // Fetch available games when no active game
-  useEffect(() => {
-    if (activeGameId || wsState !== 'OPEN') return;
-
-    const fetchGames = async () => {
-      try {
-        const res = await fetch('http://localhost:3000/api/games');
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const games = await res.json();
-        setAvailableGames(games);
-        addLog(`Fetched ${games.length} available games`);
-      } catch (error) {
-        addLog(`Failed to fetch games: ${String(error)}`);
-        console.error('Error fetching games:', error);
-      }
-    };
-
-    fetchGames();
-    const interval = setInterval(fetchGames, 5000); // Refresh every 5s
-    return () => clearInterval(interval);
-  }, [activeGameId, wsState]);
 
   useEffect(() => {
     const url = `ws://${location.hostname}:8080`;
@@ -151,8 +132,6 @@ function App() {
         }
 
         handleEvent(data);
-
-        // TODO: handle event types and update board
       } catch (error) {
         console.error('Failed to parse WS message', error);
         addLog(`RECV ← ${String(event.data)}`);
@@ -330,7 +309,7 @@ function App() {
                   className="flex items-center justify-between p-3 bg-gray-100 rounded"
                 >
                   <div className="text-left">
-                    <div className="font-semibold text-sm">
+                    <div className="font-semibold text-sm text-black">
                       Game: {game.gameId.slice(0, 8)}...
                     </div>
                     <div className="text-xs text-gray-600">

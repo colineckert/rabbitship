@@ -1,17 +1,17 @@
-export type PlayerId = "p1" | "p2" | "ai";
+export type PlayerId = 'p1' | 'p2' | 'ai';
 
-export type GameMode = "ai" | "multiplayer";
+export type GameMode = 'ai' | 'multiplayer';
 
-export type GamePhase = "setup" | "play" | "over";
+export type GamePhase = 'setup' | 'play' | 'over';
 
 export const BOARD_SIZE = 10;
 
 export type ShipKey =
-  | "carrier"
-  | "battleship"
-  | "cruiser1"
-  | "cruiser2"
-  | "destroyer";
+  | 'carrier'
+  | 'battleship'
+  | 'cruiser1'
+  | 'cruiser2'
+  | 'destroyer';
 
 export const ShipLengthMap: Record<ShipKey, number> = {
   carrier: 5,
@@ -23,9 +23,9 @@ export const ShipLengthMap: Record<ShipKey, number> = {
 
 export const ShipLengths = [5, 4, 3, 3, 2]; // Total: 17 squares
 
-export type Direction = "h" | "v";
+export type Direction = 'h' | 'v';
 
-export type Cell = "empty" | "miss" | `${ShipKey}-ship` | `${ShipKey}-hit`;
+export type Cell = 'empty' | 'miss' | `${ShipKey}-ship` | `${ShipKey}-hit`;
 
 export interface ShipPlacement {
   x: number;
@@ -44,7 +44,7 @@ export interface GameState {
   // Players (wsId for multiplayer, 'ai' for AI)
   players: {
     p1: string | null; // wsId or null (not joined)
-    p2: string | null | "ai";
+    p2: string | null | 'ai';
   };
 
   // Current turn (only during 'play')
@@ -82,7 +82,7 @@ export function serializeOpponentBoard(
     row.map((_, x) => {
       const coord = `${x},${y}`;
       if (opponentShots.has(coord)) return grid[y][x]; // hit/miss
-      return "empty"; // Hide ships
+      return 'empty'; // Hide ships
     }),
   );
 }
@@ -94,26 +94,27 @@ export function isValidCoord(x: number, y: number): boolean {
 
 export function gameOver(state: GameState): boolean {
   return (
-    state.phase === "over" ||
+    state.phase === 'over' ||
     state.p1.shipsSunk === 5 ||
     state.p2.shipsSunk === 5
   );
 }
 
 export function isPlayersTurn(state: GameState, player: PlayerId): boolean {
-  return state.phase === "play" && state.turn === player;
+  return state.phase === 'play' && state.turn === player;
 }
 
 export const EVENT_TYPE = {
-  JOIN: "join",
-  PLAYER_JOINED: "player-joined",
-  CREATE_GAME: "create-game",
-  GAME_CREATED: "game-created",
-  PLACE_SHIP: "place-ship",
-  PLACE_SHIP_RESULT: "place-ship-result",
-  MOVE: "move",
-  MOVE_RESULT: "move-result",
-  GAME_OVER: "game-over",
+  JOIN: 'join',
+  PLAYER_JOINED: 'player-joined',
+  CREATE_GAME: 'create-game',
+  GAME_CREATED: 'game-created',
+  PLACE_SHIP: 'place-ship',
+  PLACE_SHIP_RESULT: 'place-ship-result',
+  MOVE: 'move',
+  MOVE_RESULT: 'move-result',
+  GAME_OVER: 'game-over',
+  GAMES_UPDATE: 'games-update',
 } as const;
 
 export type EventType = (typeof EVENT_TYPE)[keyof typeof EVENT_TYPE];
@@ -142,7 +143,7 @@ export interface CreateGameEvent {
 export interface GameCreatedEvent {
   type: typeof EVENT_TYPE.GAME_CREATED;
   gameId: string;
-  players: { p1: string | null; p2: string | null | "ai" };
+  players: { p1: string | null; p2: string | null | 'ai' };
   mode: GameMode;
   createdAt: number;
 }
@@ -204,6 +205,15 @@ export interface GameOverEvent {
   totalMoves: number;
 }
 
+export interface GamesUpdateEvent {
+  type: typeof EVENT_TYPE.GAMES_UPDATE;
+  games: Array<{
+    gameId: string;
+    mode: GameMode;
+    players: { p1: string | null; p2: string | null };
+  }>;
+}
+
 export type GameEvent =
   | JoinEvent
   | PlayerJoinedEvent
@@ -213,4 +223,5 @@ export type GameEvent =
   | PlaceShipResultEvent
   | MoveEvent
   | MoveResultEvent
-  | GameOverEvent;
+  | GameOverEvent
+  | GamesUpdateEvent;
