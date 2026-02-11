@@ -37,6 +37,7 @@ export interface ShipPlacement {
 export interface GameState {
   // Metadata
   id: string;
+  title: string | null;
   mode: GameMode;
   phase: GamePhase;
   createdAt: number;
@@ -138,14 +139,23 @@ export interface CreateGameEvent {
   player: PlayerId; // requested player slot (p1/p2)
   wsId: string;
   mode?: GameMode;
+  title: string | null;
 }
 
 export interface GameCreatedEvent {
   type: typeof EVENT_TYPE.GAME_CREATED;
   gameId: string;
+  title: string | null;
   players: { p1: string | null; p2: string | null | 'ai' };
   mode: GameMode;
   createdAt: number;
+}
+
+export interface Game {
+  gameId: string;
+  title: string | null;
+  mode: GameMode;
+  players: { p1: string | null; p2: string | null | 'ai' };
 }
 
 export interface PlaceShipEvent {
@@ -210,6 +220,7 @@ export interface GamesUpdateEvent {
   games: Array<{
     gameId: string;
     mode: GameMode;
+    title: string | null;
     players: { p1: string | null; p2: string | null };
   }>;
 }

@@ -1,6 +1,6 @@
 import { createEmptyBoard } from './utils';
 import { placeShipsRandomly } from './placement';
-import type { GameMode, GamePhase, GameState } from './types';
+import type { Game, GameMode, GamePhase, GameState } from './types';
 
 export class GameEngine {
   private games: Map<string, GameState>;
@@ -9,10 +9,15 @@ export class GameEngine {
     this.games = new Map();
   }
 
-  createGame(id: string, mode: GameMode): GameState {
+  createGame(
+    id: string,
+    mode: GameMode,
+    title: string | null = null,
+  ): GameState {
     const state: GameState = {
       id,
       mode,
+      title,
       phase: 'setup' as GamePhase,
       createdAt: Date.now(),
       players: { p1: null, p2: mode === 'ai' ? 'ai' : null },
@@ -53,16 +58,13 @@ export class GameEngine {
     this.games.delete(id);
   }
 
-  getAvailableGames(): Array<{
-    gameId: string;
-    mode: GameMode;
-    players: { p1: string | null; p2: string | null | 'ai' };
-  }> {
+  getAvailableGames(): Game[] {
     return Array.from(this.games.values())
       .filter((game) => game.players.p1 === null || game.players.p2 === null)
       .map((game) => ({
         gameId: game.id,
         mode: game.mode,
+        title: game.title,
         players: game.players,
       }));
   }

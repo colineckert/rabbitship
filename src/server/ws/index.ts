@@ -50,6 +50,7 @@ const handlers: Record<
           player: data.player,
           wsId: resolvedWsId,
           mode: data.mode ?? 'multiplayer',
+          title: data.title ?? null,
           from: 'ws',
           ts: Date.now(),
         },

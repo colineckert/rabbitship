@@ -5,6 +5,7 @@ import {
   type GameEvent,
   type PlayerId,
   type ShipKey,
+  type Game,
 } from '../game/types';
 import { Board } from './components/Board';
 
@@ -38,13 +39,7 @@ function App() {
     Array.from({ length: 10 }, () => Array(10).fill('empty')),
   );
 
-  const [availableGames, setAvailableGames] = useState<
-    Array<{
-      gameId: string;
-      mode: string;
-      players: { p1: string | null; p2: string | null };
-    }>
-  >([]);
+  const [availableGames, setAvailableGames] = useState<Array<Game>>([]);
 
   function addLog(text: string) {
     setLogs((s) => [{ time: now(), text }, ...s].slice(0, 200));
@@ -158,11 +153,14 @@ function App() {
   // Quick helpers
   function newGame() {
     const player = 'p1';
+    const title =
+      prompt('Game title (optional):', 'My RabbitShip Game') || null;
     send({
       type: EVENT_TYPE.CREATE_GAME,
       player,
       // wsId optional (server will attach based on socket)
       mode: 'multiplayer',
+      title,
     });
 
     playerId.current = player as PlayerId;
@@ -310,7 +308,7 @@ function App() {
                 >
                   <div className="text-left">
                     <div className="font-semibold text-sm text-black">
-                      Game: {game.gameId.slice(0, 8)}...
+                      Game: {game.title || game.gameId.slice(0, 8)}
                     </div>
                     <div className="text-xs text-gray-600">
                       Mode: {game.mode} | Players:{' '}

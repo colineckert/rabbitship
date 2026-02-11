@@ -1,14 +1,14 @@
-import type amqp from "amqplib";
-import { AckType } from "../rabbit/subscribe";
-import { GameEngine } from "../../game/engine";
+import type amqp from 'amqplib';
+import { AckType } from '../rabbit/subscribe';
+import { GameEngine } from '../../game/engine';
 import {
   EVENT_TYPE,
   type JoinEvent,
   type CreateGameEvent,
   type GameCreatedEvent,
-} from "../../game/types";
-import { EVENT_TO_ROUTING, EXCHANGE } from "../rabbit/constants";
-import { publishMsgPack } from "../rabbit/publish";
+} from '../../game/types';
+import { EVENT_TO_ROUTING, EXCHANGE } from '../rabbit/constants';
+import { publishMsgPack } from '../rabbit/publish';
 
 function makeGameId() {
   try {
@@ -28,19 +28,20 @@ export function createCreateGameHandler(
     try {
       const wsId = payload?.wsId;
       const player = payload?.player;
-      const mode = payload?.mode ?? "multiplayer";
+      const mode = payload?.mode ?? 'multiplayer';
+      const title = payload?.title ?? null;
 
       if (!wsId || !player) {
-        console.error("Create event missing wsId or player");
+        console.error('Create event missing wsId or player');
         return AckType.NackDiscard;
       }
 
       const gameId = makeGameId();
-      engine.createGame(gameId, mode);
+      engine.createGame(gameId, mode, title);
 
       const state = engine.getGame(gameId)!;
       // assign creator to requested slot when available
-      if (player === "p1" || player === "p2") {
+      if (player === 'p1' || player === 'p2') {
         state.players[player] = wsId;
       }
 
@@ -50,6 +51,7 @@ export function createCreateGameHandler(
         const payloadOut: GameCreatedEvent = {
           type: EVENT_TYPE.GAME_CREATED,
           gameId,
+          title,
           players: state.players,
           mode: state.mode,
           createdAt: state.createdAt,
@@ -62,11 +64,11 @@ export function createCreateGameHandler(
         );
         return AckType.Ack;
       } catch (err) {
-        console.error("Failed to publish GAME_CREATED event:", err);
+        console.error('Failed to publish GAME_CREATED event:', err);
         return AckType.NackRequeue;
       }
     } catch (err) {
-      console.error("createHandler unexpected error:", err);
+      console.error('createHandler unexpected error:', err);
       return AckType.NackDiscard;
     }
   };
@@ -83,7 +85,7 @@ export function createJoinGameHandler(
       const gameId: string | undefined = payload?.gameId;
 
       if (!wsId || !player || !gameId) {
-        console.error("Join event missing wsId, player or gameId");
+        console.error('Join event missing wsId, player or gameId');
         return AckType.NackDiscard;
       }
 
@@ -94,7 +96,7 @@ export function createJoinGameHandler(
       }
 
       // Assign wsId to the requested player slot if available
-      if (player === "p1" || player === "p2") {
+      if (player === 'p1' || player === 'p2') {
         if (!state.players[player]) {
           state.players[player] = wsId;
         } else {
@@ -112,6 +114,7 @@ export function createJoinGameHandler(
         const payloadOut = {
           type: EVENT_TYPE.PLAYER_JOINED,
           gameId,
+          title: state.title,
           player,
           wsId,
           players: state.players,
@@ -126,11 +129,11 @@ export function createJoinGameHandler(
         );
         return AckType.Ack;
       } catch (err) {
-        console.error("Failed to publish join event:", err);
+        console.error('Failed to publish join event:', err);
         return AckType.NackRequeue;
       }
     } catch (err) {
-      console.error("joinHandler unexpected error:", err);
+      console.error('joinHandler unexpected error:', err);
       return AckType.NackDiscard;
     }
   };
