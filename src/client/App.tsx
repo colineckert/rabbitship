@@ -6,8 +6,13 @@ import {
   type PlayerId,
   type ShipKey,
   type Game,
+  type Direction,
+  ShipLengthMap,
 } from '../game/types';
 import { Board } from './components/Board';
+import { ShipList } from './components/ShipList';
+import { DirectionToggle } from './components/DirectionToggle';
+import { PlacementBoard } from './components/PlacementBoard';
 
 type LogEntry = { time: string; text: string };
 
@@ -31,6 +36,9 @@ function App() {
     cruiser2: true,
     destroyer: true,
   });
+  const [selectedShip, setSelectedShip] = useState<ShipKey | null>(null);
+  const [direction, setDirection] = useState<Direction>('h');
+  const [isPlacing, setIsPlacing] = useState(false);
 
   const playerBoard = useRef<string[][]>(
     Array.from({ length: 10 }, () => Array(10).fill('empty')),
@@ -58,10 +66,12 @@ function App() {
       setActiveGameId(data.gameId);
     }
     if (data.type === EVENT_TYPE.PLACE_SHIP_RESULT) {
+      setIsPlacing(false);
       if (data.success) {
         if (data.player === playerId.current) {
           playerBoard.current = data.playerBoard;
           setShipsToPlace((s) => ({ ...s, [data.ship]: false }));
+          setSelectedShip(null);
         }
       } else {
         alert('Failed to place ship');
@@ -200,48 +210,6 @@ function App() {
     });
   }
 
-  function placeShip() {
-    const gameId = activeGameId || prompt('gameId?');
-    if (!gameId) return;
-
-    const player = playerId.current || prompt('player (p1/p2)', 'p1') || 'p1';
-
-    const availableShips = Object.entries(shipsToPlace)
-      .filter(([, toPlace]) => toPlace)
-      .map(([shipKey]) => shipKey);
-    if (availableShips.length === 0) {
-      alert('No ships left to place!');
-      return;
-    }
-
-    let ship: ShipKey;
-    while (true) {
-      const shipInput = prompt(
-        `ship key (${availableShips.join('/')})`,
-        availableShips[0],
-      );
-      if (shipInput && availableShips.includes(shipInput)) {
-        ship = shipInput as ShipKey;
-        break;
-      }
-      alert('Invalid ship key, please try again.');
-    }
-
-    const x = Number(prompt('x (0-9)', '0'));
-    const y = Number(prompt('y (0-9)', '0'));
-    const dir = prompt('dir (h/v)', 'h') || 'h';
-
-    send({
-      type: EVENT_TYPE.PLACE_SHIP,
-      gameId,
-      player,
-      ship,
-      x,
-      y,
-      dir,
-    });
-  }
-
   function fireMove() {
     const gameId = activeGameId || prompt('gameId?');
     if (!gameId) return;
@@ -255,6 +223,22 @@ function App() {
       player,
       x,
       y,
+    });
+  }
+
+  function handleBoardClick(x: number, y: number) {
+    if (!selectedShip || !activeGameId || isPlacing) return;
+
+    setIsPlacing(true);
+    const player = playerId.current || 'p1';
+    send({
+      type: EVENT_TYPE.PLACE_SHIP,
+      gameId: activeGameId,
+      player,
+      ship: selectedShip,
+      x,
+      y,
+      dir: direction,
     });
   }
 
@@ -280,12 +264,6 @@ function App() {
           </div>
         ) : (
           <div className="flex gap-3">
-            <button
-              onClick={placeShip}
-              className="px-4 py-2 bg-yellow-500 text-black rounded cursor-pointer"
-            >
-              Place Ship
-            </button>
             <button
               onClick={fireMove}
               className="px-4 py-2 bg-red-500 text-white rounded cursor-pointer disabled:opacity-50 disable:cursor-not-allowed"
@@ -360,17 +338,75 @@ function App() {
         )}
 
         <div className="mt-8 flex gap-8 justify-center">
-          <div>
-            {/* TODO: display remaing ships */}
-            <h2 className="text-center text-xl font-bold mb-4">Player Board</h2>
-            <Board playerBoard={playerBoard.current} />
-          </div>
-          <div>
-            <h2 className="text-center text-xl font-bold mb-4">
-              Opponent Board
-            </h2>
-            <Board playerBoard={opponentBoard.current} />
-          </div>
+          {/* Setup Phase: Show Ship Placement UI */}
+          {activeGameId && Object.values(shipsToPlace).some((v) => v) && (
+            <div className="flex gap-8">
+              <div className="flex flex-col gap-6">
+                <ShipList
+                  shipsToPlace={shipsToPlace}
+                  selectedShip={selectedShip}
+                  onSelectShip={setSelectedShip}
+                  disabled={isPlacing}
+                />
+                <DirectionToggle
+                  direction={direction}
+                  onDirectionChange={setDirection}
+                  selectedShip={selectedShip}
+                  disabled={isPlacing}
+                />
+              </div>
+              <div>
+                <h2 className="text-center text-xl font-bold mb-4">
+                  Place Ships
+                </h2>
+                <PlacementBoard
+                  playerBoard={playerBoard.current}
+                  onCellClick={handleBoardClick}
+                  disabled={isPlacing}
+                  currentShipLength={
+                    selectedShip ? ShipLengthMap[selectedShip] : undefined
+                  }
+                  currentShipDirection={direction}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Play Phase: Show both boards */}
+          {activeGameId && !Object.values(shipsToPlace).some((v) => v) && (
+            <>
+              <div>
+                <h2 className="text-center text-xl font-bold mb-4">
+                  Player Board
+                </h2>
+                <Board playerBoard={playerBoard.current} />
+              </div>
+              <div>
+                <h2 className="text-center text-xl font-bold mb-4">
+                  Opponent Board
+                </h2>
+                <Board playerBoard={opponentBoard.current} />
+              </div>
+            </>
+          )}
+
+          {/* No active game: Show player/opponent boards as empty */}
+          {!activeGameId && (
+            <>
+              <div>
+                <h2 className="text-center text-xl font-bold mb-4">
+                  Player Board
+                </h2>
+                <Board playerBoard={playerBoard.current} />
+              </div>
+              <div>
+                <h2 className="text-center text-xl font-bold mb-4">
+                  Opponent Board
+                </h2>
+                <Board playerBoard={opponentBoard.current} />
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>
