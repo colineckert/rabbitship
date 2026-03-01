@@ -66,8 +66,8 @@ function resolveShot(
     return { hit: false };
   }
 
-  // Hit
-  const shipKey = cell as ShipKey;
+  // Hit — cell is e.g. "carrier-ship"; strip suffix to get the ShipKey
+  const shipKey = cell.replace(/-ship$/, "") as ShipKey;
   opponent.grid[y][x] = `${shipKey}-hit`;
 
   // Track hits on the ship

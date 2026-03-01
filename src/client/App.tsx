@@ -14,6 +14,7 @@ import { Board } from './components/Board';
 import { ShipList } from './components/ShipList';
 import { DirectionToggle } from './components/DirectionToggle';
 import { PlacementBoard } from './components/PlacementBoard';
+import { SunkShipsTracker } from './components/SunkShipsTracker';
 
 type LogEntry = { time: string; text: string };
 
@@ -43,6 +44,7 @@ function App() {
   const [isFiring, setIsFiring] = useState(false);
   const [opponentShipsPlaced, setOpponentShipsPlaced] = useState(0);
   const [currentTurn, setCurrentTurn] = useState<PlayerId>('p1');
+  const [opponentSunkShips, setOpponentSunkShips] = useState<Partial<Record<ShipKey, boolean>>>({});
 
   const [playerBoard, setPlayerBoard] = useState<string[][]>(
     Array.from({ length: 10 }, () => Array(10).fill('empty')),
@@ -96,6 +98,9 @@ function App() {
       } else {
         setPlayerBoard(data.p2Board);
         setOpponentBoard(data.p2OpponentBoard);
+      }
+      if (data.player === playerId.current && data.sunkShip) {
+        setOpponentSunkShips((prev) => ({ ...prev, [data.sunkShip!]: true }));
       }
       setCurrentTurn(data.nextTurn);
       setIsFiring(false);
@@ -401,12 +406,15 @@ function App() {
                     Waiting for opponent to fire…
                   </p>
                 )}
-                <Board
-                  playerBoard={opponentBoard}
-                  onCellClick={handleOpponentBoardClick}
-                  attackMode={true}
-                  disabled={isFiring || !isMyTurn}
-                />
+                <div className="flex gap-6">
+                  <Board
+                    playerBoard={opponentBoard}
+                    onCellClick={handleOpponentBoardClick}
+                    attackMode={true}
+                    disabled={isFiring || !isMyTurn}
+                  />
+                  <SunkShipsTracker sunkShips={opponentSunkShips} />
+                </div>
               </div>
             </>
           )}

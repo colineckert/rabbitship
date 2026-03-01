@@ -22,11 +22,11 @@ const cellToColor = (cell: string) => {
     case 'cruiser2-ship':
     case 'destroyer-ship':
       return 'bg-gray-600';
-    case 'carrier-ship-hit':
-    case 'battleship-ship-hit':
-    case 'cruiser1-ship-hit':
-    case 'cruiser2-ship-hit':
-    case 'destroyer-ship-hit':
+    case 'carrier-hit':
+    case 'battleship-hit':
+    case 'cruiser1-hit':
+    case 'cruiser2-hit':
+    case 'destroyer-hit':
       return 'bg-red-500';
     default:
       return 'bg-slate-100';
