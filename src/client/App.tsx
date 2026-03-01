@@ -41,10 +41,10 @@ function App() {
   const [isPlacing, setIsPlacing] = useState(false);
   const [isFiring, setIsFiring] = useState(false);
 
-  const playerBoard = useRef<string[][]>(
+  const [playerBoard, setPlayerBoard] = useState<string[][]>(
     Array.from({ length: 10 }, () => Array(10).fill('empty')),
   );
-  const opponentBoard = useRef<string[][]>(
+  const [opponentBoard, setOpponentBoard] = useState<string[][]>(
     Array.from({ length: 10 }, () => Array(10).fill('empty')),
   );
 
@@ -70,7 +70,7 @@ function App() {
       setIsPlacing(false);
       if (data.success) {
         if (data.player === playerId.current) {
-          playerBoard.current = data.playerBoard;
+          setPlayerBoard(data.playerBoard);
           setShipsToPlace((s) => ({ ...s, [data.ship]: false }));
           setSelectedShip(null);
         }
@@ -82,11 +82,11 @@ function App() {
     if (data.type === EVENT_TYPE.MOVE_RESULT) {
       // Always update boards based on current player's perspective
       if (playerId.current === 'p1') {
-        playerBoard.current = data.p1Board; // P1's view
-        opponentBoard.current = data.p2Board; // P1's view of P2's board
+        setPlayerBoard(data.p1Board);
+        setOpponentBoard(data.p2Board);
       } else {
-        playerBoard.current = data.p2Board; // P2's view
-        opponentBoard.current = data.p1Board; // P2's view of P1's board
+        setPlayerBoard(data.p2Board);
+        setOpponentBoard(data.p1Board);
       }
       setIsFiring(false);
     }
@@ -94,11 +94,11 @@ function App() {
       alert('Game Over!');
       // Update final boards and show game over message
       if (playerId.current === 'p1') {
-        playerBoard.current = data.finalBoards.p1Board;
-        opponentBoard.current = data.finalBoards.p2Board;
+        setPlayerBoard(data.finalBoards.p1Board);
+        setOpponentBoard(data.finalBoards.p2Board);
       } else {
-        playerBoard.current = data.finalBoards.p2Board;
-        opponentBoard.current = data.finalBoards.p1Board;
+        setPlayerBoard(data.finalBoards.p2Board);
+        setOpponentBoard(data.finalBoards.p1Board);
       }
 
       const winnerText =
@@ -348,7 +348,7 @@ function App() {
                   Place Ships
                 </h2>
                 <PlacementBoard
-                  playerBoard={playerBoard.current}
+                  playerBoard={playerBoard}
                   onCellClick={handleBoardClick}
                   disabled={isPlacing}
                   currentShipLength={
@@ -367,14 +367,14 @@ function App() {
                 <h2 className="text-center text-xl font-bold mb-4">
                   Player Board
                 </h2>
-                <Board playerBoard={playerBoard.current} />
+                <Board playerBoard={playerBoard} />
               </div>
               <div>
                 <h2 className="text-center text-xl font-bold mb-4">
                   Opponent Board
                 </h2>
                 <Board
-                  playerBoard={opponentBoard.current}
+                  playerBoard={opponentBoard}
                   onCellClick={handleOpponentBoardClick}
                   attackMode={true}
                   disabled={isFiring}
@@ -390,13 +390,13 @@ function App() {
                 <h2 className="text-center text-xl font-bold mb-4">
                   Player Board
                 </h2>
-                <Board playerBoard={playerBoard.current} />
+                <Board playerBoard={playerBoard} />
               </div>
               <div>
                 <h2 className="text-center text-xl font-bold mb-4">
                   Opponent Board
                 </h2>
-                <Board playerBoard={opponentBoard.current} />
+                <Board playerBoard={opponentBoard} />
               </div>
             </>
           )}
