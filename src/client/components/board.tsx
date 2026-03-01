@@ -7,6 +7,7 @@ type BoardProps = {
   disabled?: boolean;
   currentShipLength?: number;
   currentShipDirection?: Direction;
+  attackMode?: boolean;
 };
 
 const cellToColor = (cell: string) => {
@@ -14,7 +15,7 @@ const cellToColor = (cell: string) => {
     case 'empty':
       return 'bg-slate-100';
     case 'miss':
-      return 'bg-blue-200';
+      return 'bg-gray-300';
     case 'carrier-ship':
     case 'battleship-ship':
     case 'cruiser1-ship':
@@ -38,6 +39,7 @@ export function Board({
   disabled = false,
   currentShipLength,
   currentShipDirection,
+  attackMode = false,
 }: BoardProps) {
   const [hoveredCell, setHoveredCell] = useState<[number, number] | null>(null);
 
@@ -109,14 +111,17 @@ export function Board({
 
               let className = `w-8 h-8 border ${cellToColor(cell)}`;
 
-              // Add preview styling
-              if (inPreview && onCellClick && !disabled) {
+              if (attackMode && onCellClick && !disabled) {
+                // Attack mode: hover only on empty (unshot) cells
+                if (cell === 'empty') {
+                  className = `w-8 h-8 border ${isHovered ? 'bg-red-200' : 'bg-slate-100 hover:bg-red-200'} cursor-pointer`;
+                }
+              } else if (inPreview && onCellClick && !disabled) {
+                // Ship placement preview
                 if (isHovered) {
-                  // Hovered cell - darker preview
                   className =
                     'w-8 h-8 border bg-blue-400 opacity-80 cursor-pointer';
                 } else {
-                  // Other cells in preview - lighter preview
                   className =
                     'w-8 h-8 border bg-blue-200 opacity-60 cursor-pointer hover:opacity-75';
                 }
@@ -132,7 +137,10 @@ export function Board({
                 <div
                   key={colIndex}
                   className={className}
-                  onClick={() => onCellClick?.(colIndex, rowIndex)}
+                  onClick={() => {
+                    if (attackMode && cell !== 'empty') return;
+                    onCellClick?.(colIndex, rowIndex);
+                  }}
                   onMouseEnter={() => handleMouseEnter(colIndex, rowIndex)}
                   onMouseLeave={handleMouseLeave}
                   role={onCellClick ? 'button' : undefined}

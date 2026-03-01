@@ -39,6 +39,7 @@ function App() {
   const [selectedShip, setSelectedShip] = useState<ShipKey | null>(null);
   const [direction, setDirection] = useState<Direction>('h');
   const [isPlacing, setIsPlacing] = useState(false);
+  const [isFiring, setIsFiring] = useState(false);
 
   const playerBoard = useRef<string[][]>(
     Array.from({ length: 10 }, () => Array(10).fill('empty')),
@@ -87,6 +88,7 @@ function App() {
         playerBoard.current = data.p2Board; // P2's view
         opponentBoard.current = data.p1Board; // P2's view of P1's board
       }
+      setIsFiring(false);
     }
     if (data.type === EVENT_TYPE.GAME_OVER) {
       alert('Game Over!');
@@ -210,16 +212,13 @@ function App() {
     });
   }
 
-  function fireMove() {
-    const gameId = activeGameId || prompt('gameId?');
-    if (!gameId) return;
-
-    const player = playerId.current || prompt('player (p1/p2)', 'p1') || 'p1';
-    const x = Number(prompt('x (0-9)', '0'));
-    const y = Number(prompt('y (0-9)', '0'));
+  function handleOpponentBoardClick(x: number, y: number) {
+    if (!activeGameId || isFiring) return;
+    const player = playerId.current || 'p1';
+    setIsFiring(true);
     send({
       type: EVENT_TYPE.MOVE,
-      gameId,
+      gameId: activeGameId,
       player,
       x,
       y,
@@ -253,24 +252,13 @@ function App() {
       </div>
 
       <div className="mb-6 flex gap-3 justify-center flex-col items-center">
-        {!activeGameId ? (
+        {!activeGameId && (
           <div className="flex gap-3">
             <button
               onClick={newGame}
               className="px-4 py-2 bg-green-500 text-white rounded cursor-pointer"
             >
               New Game
-            </button>
-          </div>
-        ) : (
-          <div className="flex gap-3">
-            <button
-              onClick={fireMove}
-              className="px-4 py-2 bg-red-500 text-white rounded cursor-pointer disabled:opacity-50 disable:cursor-not-allowed"
-              // disable firing moves until all ships placed
-              disabled={Object.values(shipsToPlace).some((v) => v)}
-            >
-              Fire Move
             </button>
           </div>
         )}
@@ -385,7 +373,12 @@ function App() {
                 <h2 className="text-center text-xl font-bold mb-4">
                   Opponent Board
                 </h2>
-                <Board playerBoard={opponentBoard.current} />
+                <Board
+                  playerBoard={opponentBoard.current}
+                  onCellClick={handleOpponentBoardClick}
+                  attackMode={true}
+                  disabled={isFiring}
+                />
               </div>
             </>
           )}
