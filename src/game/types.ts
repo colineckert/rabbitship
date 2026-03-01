@@ -198,8 +198,10 @@ export interface MoveResultEvent {
   sunkShip?: ShipKey;
   player: PlayerId;
   nextTurn: PlayerId;
-  p1Board: string[][]; // Opponent view for P1
-  p2Board: string[][]; // Opponent view for P2
+  p1Board: string[][];         // P1's own grid (own ships + P2's hits)
+  p2Board: string[][];         // P2's own grid (own ships + P1's hits)
+  p1OpponentBoard: string[][]; // P2's grid masked for P1 (only P1's shots visible)
+  p2OpponentBoard: string[][]; // P1's grid masked for P2 (only P2's shots visible)
   shipsSunk: { p1: number; p2: number };
 }
 

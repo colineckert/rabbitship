@@ -12,41 +12,28 @@ function isValidCoord(x: number, y: number): boolean {
   return x >= 0 && x < 10 && y >= 0 && y < 10;
 }
 
-function prepareBoardViews(
-  move: MoveEvent,
-  gs: GameState,
-): {
+function maskShips(grid: string[][]): string[][] {
+  return grid.map((row) =>
+    row.map((cell) =>
+      cell !== "empty" && cell !== "miss" && !cell.endsWith("-hit")
+        ? "empty"
+        : cell,
+    ),
+  );
+}
+
+function prepareBoardViews(gs: GameState): {
   p1Board: string[][];
   p2Board: string[][];
+  p1OpponentBoard: string[][];
+  p2OpponentBoard: string[][];
 } {
-  const p1Board = gs.p1.grid.map((row) => [...row]);
-  const p2Board = gs.p2.grid.map((row) => [...row]);
-
-  // Determine which player is requesting the view
-  const player = move.player;
-
-  // Hide opponent ships
-  if (player === "p1") {
-    for (let y = 0; y < 10; y++) {
-      for (let x = 0; x < 10; x++) {
-        const cell = p2Board[y][x];
-        if (cell !== "empty" && cell !== "miss" && !cell.endsWith("-hit")) {
-          p2Board[y][x] = "empty";
-        }
-      }
-    }
-  } else {
-    for (let y = 0; y < 10; y++) {
-      for (let x = 0; x < 10; x++) {
-        const cell = p1Board[y][x];
-        if (cell !== "empty" && cell !== "miss" && !cell.endsWith("-hit")) {
-          p1Board[y][x] = "empty";
-        }
-      }
-    }
-  }
-
-  return { p1Board, p2Board };
+  return {
+    p1Board: gs.p1.grid.map((row) => [...row]),         // P1's own grid (full)
+    p2Board: gs.p2.grid.map((row) => [...row]),         // P2's own grid (full)
+    p1OpponentBoard: maskShips(gs.p2.grid),             // P2's grid hidden for P1
+    p2OpponentBoard: maskShips(gs.p1.grid),             // P1's grid hidden for P2
+  };
 }
 
 export type ShotResult =
@@ -132,7 +119,7 @@ export function handleMove(
 
   // Sanitize board views before sending
   // This has to be based on wsId to ensure right wsClient gets correct view
-  const { p1Board, p2Board } = prepareBoardViews(move, gs);
+  const { p1Board, p2Board, p1OpponentBoard, p2OpponentBoard } = prepareBoardViews(gs);
 
   const moveResult: MoveResultEvent = {
     gameId: move.gameId,
@@ -144,6 +131,8 @@ export function handleMove(
     shipsSunk: { p1: gs.p1.shipsSunk, p2: gs.p2.shipsSunk },
     p1Board,
     p2Board,
+    p1OpponentBoard,
+    p2OpponentBoard,
     player: move.player,
     nextTurn: move.player === "p1" ? "p2" : "p1",
   };

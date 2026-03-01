@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   EVENT_TYPE,
   type GameEvent,
+  type GameMode,
   type PlayerId,
   type ShipKey,
   type Game,
@@ -40,6 +41,8 @@ function App() {
   const [direction, setDirection] = useState<Direction>('h');
   const [isPlacing, setIsPlacing] = useState(false);
   const [isFiring, setIsFiring] = useState(false);
+  const [opponentShipsPlaced, setOpponentShipsPlaced] = useState(0);
+  const [currentTurn, setCurrentTurn] = useState<PlayerId>('p1');
 
   const [playerBoard, setPlayerBoard] = useState<string[][]>(
     Array.from({ length: 10 }, () => Array(10).fill('empty')),
@@ -59,11 +62,16 @@ function App() {
   const handleEvent = useCallback((data: GameEvent) => {
     console.log('Handling event:', data);
 
-    if (
-      data.type === EVENT_TYPE.GAME_CREATED ||
-      data.type === EVENT_TYPE.PLAYER_JOINED
-    ) {
+    if (data.type === EVENT_TYPE.GAME_CREATED) {
       console.log('*** Game created with ID:', data.gameId);
+      setActiveGameId(data.gameId);
+      if (data.mode === 'ai') {
+        // AI ships are already placed server-side — mark opponent as immediately ready
+        setOpponentShipsPlaced(5);
+      }
+    }
+    if (data.type === EVENT_TYPE.PLAYER_JOINED) {
+      console.log('*** Joined game with ID:', data.gameId);
       setActiveGameId(data.gameId);
     }
     if (data.type === EVENT_TYPE.PLACE_SHIP_RESULT) {
@@ -73,6 +81,8 @@ function App() {
           setPlayerBoard(data.playerBoard);
           setShipsToPlace((s) => ({ ...s, [data.ship]: false }));
           setSelectedShip(null);
+        } else {
+          setOpponentShipsPlaced((n) => n + 1);
         }
       } else {
         alert('Failed to place ship');
@@ -80,14 +90,14 @@ function App() {
       }
     }
     if (data.type === EVENT_TYPE.MOVE_RESULT) {
-      // Always update boards based on current player's perspective
       if (playerId.current === 'p1') {
         setPlayerBoard(data.p1Board);
-        setOpponentBoard(data.p2Board);
+        setOpponentBoard(data.p1OpponentBoard);
       } else {
         setPlayerBoard(data.p2Board);
-        setOpponentBoard(data.p1Board);
+        setOpponentBoard(data.p2OpponentBoard);
       }
+      setCurrentTurn(data.nextTurn);
       setIsFiring(false);
     }
     if (data.type === EVENT_TYPE.GAME_OVER) {
@@ -163,19 +173,17 @@ function App() {
   }
 
   // Quick helpers
-  function newGame() {
+  function newGame(mode: GameMode) {
     const player = 'p1';
     const title =
       prompt('Game title (optional):', 'My RabbitShip Game') || null;
+    playerId.current = player as PlayerId;
     send({
       type: EVENT_TYPE.CREATE_GAME,
       player,
-      // wsId optional (server will attach based on socket)
-      mode: 'multiplayer',
+      mode,
       title,
     });
-
-    playerId.current = player as PlayerId;
   }
 
   function joinGame(
@@ -212,8 +220,12 @@ function App() {
     });
   }
 
+  const allShipsPlaced = !Object.values(shipsToPlace).some((v) => v);
+  const bothPlayersReady = allShipsPlaced && opponentShipsPlaced >= 5;
+  const isMyTurn = bothPlayersReady && currentTurn === playerId.current;
+
   function handleOpponentBoardClick(x: number, y: number) {
-    if (!activeGameId || isFiring) return;
+    if (!activeGameId || isFiring || !isMyTurn) return;
     const player = playerId.current || 'p1';
     setIsFiring(true);
     send({
@@ -255,10 +267,16 @@ function App() {
         {!activeGameId && (
           <div className="flex gap-3">
             <button
-              onClick={newGame}
+              onClick={() => newGame('multiplayer')}
               className="px-4 py-2 bg-green-500 text-white rounded cursor-pointer"
             >
-              New Game
+              New PvP
+            </button>
+            <button
+              onClick={() => newGame('ai')}
+              className="px-4 py-2 bg-blue-500 text-white rounded cursor-pointer"
+            >
+              New PvE
             </button>
           </div>
         )}
@@ -373,11 +391,21 @@ function App() {
                 <h2 className="text-center text-xl font-bold mb-4">
                   Opponent Board
                 </h2>
+                {!bothPlayersReady && (
+                  <p className="text-center text-sm text-gray-500 mb-2">
+                    Waiting for opponent to place ships…
+                  </p>
+                )}
+                {bothPlayersReady && !isMyTurn && (
+                  <p className="text-center text-sm text-gray-500 mb-2">
+                    Waiting for opponent to fire…
+                  </p>
+                )}
                 <Board
                   playerBoard={opponentBoard}
                   onCellClick={handleOpponentBoardClick}
                   attackMode={true}
-                  disabled={isFiring}
+                  disabled={isFiring || !isMyTurn}
                 />
               </div>
             </>

@@ -99,3 +99,33 @@ export function placeShipsRandomly(grid: Cell[][]): void {
     }
   }
 }
+
+export function generateRandomPlacements(): Array<{
+  ship: ShipKey;
+  x: number;
+  y: number;
+  dir: Direction;
+}> {
+  const grid: Cell[][] = Array.from({ length: BOARD_SIZE }, () =>
+    Array(BOARD_SIZE).fill("empty"),
+  );
+  const placements: Array<{ ship: ShipKey; x: number; y: number; dir: Direction }> = [];
+
+  for (const ship in ShipLengthMap) {
+    let placed = false;
+    let attempts = 0;
+    while (!placed && attempts < 100) {
+      const dir: Direction = Math.random() < 0.5 ? "h" : "v";
+      const x = Math.floor(Math.random() * BOARD_SIZE);
+      const y = Math.floor(Math.random() * BOARD_SIZE);
+      if (tryPlaceShip(grid, x, y, ship as ShipKey, dir)) {
+        placements.push({ ship: ship as ShipKey, x, y, dir });
+        placed = true;
+      }
+      attempts++;
+    }
+    if (!placed) throw new Error("Failed to place ship after 100 attempts");
+  }
+
+  return placements;
+}
