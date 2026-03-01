@@ -15,13 +15,13 @@ const cellToColor = (cell: string) => {
     case 'empty':
       return 'bg-slate-100';
     case 'miss':
-      return 'bg-gray-300';
+      return 'bg-gray-400';
     case 'carrier-ship':
     case 'battleship-ship':
     case 'cruiser1-ship':
     case 'cruiser2-ship':
     case 'destroyer-ship':
-      return 'bg-gray-500';
+      return 'bg-gray-600';
     case 'carrier-ship-hit':
     case 'battleship-ship-hit':
     case 'cruiser1-ship-hit':
