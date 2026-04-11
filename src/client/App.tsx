@@ -419,23 +419,6 @@ function App() {
             </>
           )}
 
-          {/* No active game: Show player/opponent boards as empty */}
-          {!activeGameId && (
-            <>
-              <div>
-                <h2 className="text-center text-xl font-bold mb-4">
-                  Player Board
-                </h2>
-                <Board playerBoard={playerBoard} />
-              </div>
-              <div>
-                <h2 className="text-center text-xl font-bold mb-4">
-                  Opponent Board
-                </h2>
-                <Board playerBoard={opponentBoard} />
-              </div>
-            </>
-          )}
         </div>
       </div>
     </div>
