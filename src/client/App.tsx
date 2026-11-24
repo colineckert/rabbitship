@@ -15,8 +15,21 @@ import { ShipList } from './components/ShipList';
 import { DirectionToggle } from './components/DirectionToggle';
 import { PlacementBoard } from './components/PlacementBoard';
 import { SunkShipsTracker } from './components/SunkShipsTracker';
+import { StatusBanner, type StatusTone } from './components/StatusBanner';
+import { GameOverModal } from './components/GameOverModal';
 
 type LogEntry = { time: string; text: string };
+type GameOverInfo = { winner: PlayerId; totalMoves: number };
+
+const emptyBoard = () =>
+  Array.from({ length: 10 }, () => Array<string>(10).fill('empty'));
+const allShipsUnplaced = () => ({
+  carrier: true,
+  battleship: true,
+  cruiser1: true,
+  cruiser2: true,
+  destroyer: true,
+});
 
 function now() {
   return new Date().toISOString();
@@ -31,27 +44,22 @@ function App() {
 
   const [activeGameId, setActiveGameId] = useState<string | null>(null);
   const playerId = useRef<PlayerId | null>(null);
-  const [shipsToPlace, setShipsToPlace] = useState({
-    carrier: true,
-    battleship: true,
-    cruiser1: true,
-    cruiser2: true,
-    destroyer: true,
-  });
+  const [gameTitle, setGameTitle] = useState('My RabbitShip Game');
+  const [placementError, setPlacementError] = useState<string | null>(null);
+  const [gameOver, setGameOver] = useState<GameOverInfo | null>(null);
+  const [shipsToPlace, setShipsToPlace] = useState(allShipsUnplaced);
   const [selectedShip, setSelectedShip] = useState<ShipKey | null>(null);
   const [direction, setDirection] = useState<Direction>('h');
   const [isPlacing, setIsPlacing] = useState(false);
   const [isFiring, setIsFiring] = useState(false);
   const [opponentShipsPlaced, setOpponentShipsPlaced] = useState(0);
   const [currentTurn, setCurrentTurn] = useState<PlayerId>('p1');
-  const [opponentSunkShips, setOpponentSunkShips] = useState<Partial<Record<ShipKey, boolean>>>({});
+  const [opponentSunkShips, setOpponentSunkShips] = useState<
+    Partial<Record<ShipKey, boolean>>
+  >({});
 
-  const [playerBoard, setPlayerBoard] = useState<string[][]>(
-    Array.from({ length: 10 }, () => Array(10).fill('empty')),
-  );
-  const [opponentBoard, setOpponentBoard] = useState<string[][]>(
-    Array.from({ length: 10 }, () => Array(10).fill('empty')),
-  );
+  const [playerBoard, setPlayerBoard] = useState<string[][]>(emptyBoard);
+  const [opponentBoard, setOpponentBoard] = useState<string[][]>(emptyBoard);
 
   const [availableGames, setAvailableGames] = useState<Array<Game>>([]);
 
@@ -80,6 +88,7 @@ function App() {
       setIsPlacing(false);
       if (data.success) {
         if (data.player === playerId.current) {
+          setPlacementError(null);
           setPlayerBoard(data.playerBoard);
           setShipsToPlace((s) => ({ ...s, [data.ship]: false }));
           setSelectedShip(null);
@@ -87,7 +96,9 @@ function App() {
           setOpponentShipsPlaced((n) => n + 1);
         }
       } else {
-        alert('Failed to place ship');
+        setPlacementError(
+          'Could not place that ship there — try a different spot or direction.',
+        );
         console.warn('Place ship failed:', data);
       }
     }
@@ -106,8 +117,7 @@ function App() {
       setIsFiring(false);
     }
     if (data.type === EVENT_TYPE.GAME_OVER) {
-      alert('Game Over!');
-      // Update final boards and show game over message
+      // Update final boards and show game over overlay
       if (playerId.current === 'p1') {
         setPlayerBoard(data.finalBoards.p1Board);
         setOpponentBoard(data.finalBoards.p2Board);
@@ -115,10 +125,8 @@ function App() {
         setPlayerBoard(data.finalBoards.p2Board);
         setOpponentBoard(data.finalBoards.p1Board);
       }
-
-      const winnerText =
-        data.winner === playerId.current ? 'You won!' : `${data.winner} won!`;
-      alert(`Game Over!\n${winnerText}\nTotal moves: ${data.totalMoves}`);
+      setIsFiring(false);
+      setGameOver({ winner: data.winner, totalMoves: data.totalMoves });
     }
     if (data.type === EVENT_TYPE.GAMES_UPDATE) {
       setAvailableGames(data.games);
@@ -180,8 +188,7 @@ function App() {
   // Quick helpers
   function newGame(mode: GameMode) {
     const player = 'p1';
-    const title =
-      prompt('Game title (optional):', 'My RabbitShip Game') || null;
+    const title = gameTitle.trim() || null;
     playerId.current = player as PlayerId;
     send({
       type: EVENT_TYPE.CREATE_GAME,
@@ -191,29 +198,32 @@ function App() {
     });
   }
 
-  function joinGame(
-    gameId?: string,
-    game?: {
-      gameId: string;
-      mode: string;
-      players: { p1: string | null; p2: string | null };
-    },
-  ) {
-    const gid = gameId || game?.gameId || prompt('Enter gameId to join:');
-    if (!gid) return;
+  function resetGame() {
+    setActiveGameId(null);
+    playerId.current = null;
+    setShipsToPlace(allShipsUnplaced());
+    setSelectedShip(null);
+    setDirection('h');
+    setIsPlacing(false);
+    setIsFiring(false);
+    setOpponentShipsPlaced(0);
+    setCurrentTurn('p1');
+    setOpponentSunkShips({});
+    setPlayerBoard(emptyBoard());
+    setOpponentBoard(emptyBoard());
+    setPlacementError(null);
+    setGameOver(null);
+  }
 
-    // Intelligently assign player to the null slot
-    let player: PlayerId = 'p2'; // default
-    if (game) {
-      if (!game.players.p1) {
-        player = 'p1';
-      } else if (!game.players.p2) {
-        player = 'p2';
-      }
-    } else {
-      // Manual join without game info - prompt for player
-      player = (prompt('Join as p1 or p2? (p1/p2)', 'p2') || 'p2') as PlayerId;
-    }
+  function joinGame(game: {
+    gameId: string;
+    mode: string;
+    players: { p1: string | null; p2: string | null };
+  }) {
+    const gid = game.gameId;
+
+    // Assign player to the open slot
+    const player: PlayerId = !game.players.p1 ? 'p1' : 'p2';
 
     playerId.current = player;
     setActiveGameId(gid);
@@ -227,7 +237,41 @@ function App() {
 
   const allShipsPlaced = !Object.values(shipsToPlace).some((v) => v);
   const bothPlayersReady = allShipsPlaced && opponentShipsPlaced >= 5;
-  const isMyTurn = bothPlayersReady && currentTurn === playerId.current;
+  const isMyTurn =
+    bothPlayersReady && !gameOver && currentTurn === playerId.current;
+
+  const shipsRemaining = Object.values(shipsToPlace).filter(Boolean).length;
+  let status: { message: string; tone: StatusTone } | null = null;
+  if (activeGameId) {
+    if (gameOver) {
+      const won = gameOver.winner === playerId.current;
+      status = {
+        message: won ? 'Victory! You sank the enemy fleet.' : 'Defeat.',
+        tone: won ? 'success' : 'error',
+      };
+    } else if (placementError) {
+      status = { message: placementError, tone: 'error' };
+    } else if (!allShipsPlaced) {
+      status = {
+        message: selectedShip
+          ? `Click the board to place your ship (${shipsRemaining} left)`
+          : `Place your ships — select one from the list (${shipsRemaining} left)`,
+        tone: 'info',
+      };
+    } else if (!bothPlayersReady) {
+      status = {
+        message: `Waiting for opponent to place ships (${opponentShipsPlaced}/5)…`,
+        tone: 'warning',
+      };
+    } else if (isMyTurn) {
+      status = {
+        message: 'Your turn — fire at the opponent board!',
+        tone: 'success',
+      };
+    } else {
+      status = { message: "Opponent's turn…", tone: 'warning' };
+    }
+  }
 
   function handleOpponentBoardClick(x: number, y: number) {
     if (!activeGameId || isFiring || !isMyTurn) return;
@@ -246,6 +290,7 @@ function App() {
     if (!selectedShip || !activeGameId || isPlacing) return;
 
     setIsPlacing(true);
+    setPlacementError(null);
     const player = playerId.current || 'p1';
     send({
       type: EVENT_TYPE.PLACE_SHIP,
@@ -270,21 +315,34 @@ function App() {
 
       <div className="mb-6 flex gap-3 justify-center flex-col items-center">
         {!activeGameId && (
-          <div className="flex gap-3">
-            <button
-              onClick={() => newGame('multiplayer')}
-              className="px-4 py-2 bg-green-500 text-white rounded cursor-pointer"
-            >
-              New PvP
-            </button>
-            <button
-              onClick={() => newGame('ai')}
-              className="px-4 py-2 bg-blue-500 text-white rounded cursor-pointer"
-            >
-              New PvE
-            </button>
+          <div className="flex flex-col items-center gap-3">
+            <input
+              type="text"
+              value={gameTitle}
+              onChange={(e) => setGameTitle(e.target.value)}
+              placeholder="Game title (optional)"
+              maxLength={60}
+              aria-label="Game title"
+              className="px-3 py-2 border border-gray-300 rounded w-72 text-center"
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={() => newGame('multiplayer')}
+                className="px-4 py-2 bg-green-500 text-white rounded cursor-pointer"
+              >
+                New PvP
+              </button>
+              <button
+                onClick={() => newGame('ai')}
+                className="px-4 py-2 bg-blue-500 text-white rounded cursor-pointer"
+              >
+                New PvE
+              </button>
+            </div>
           </div>
         )}
+
+        {status && <StatusBanner message={status.message} tone={status.tone} />}
 
         {!activeGameId && availableGames.length > 0 && (
           <div className="mt-6 w-full max-w-2xl">
@@ -306,7 +364,7 @@ function App() {
                     </div>
                   </div>
                   <button
-                    onClick={() => joinGame(game.gameId, game)}
+                    onClick={() => joinGame(game)}
                     className="px-3 py-1 bg-blue-500 text-white text-sm rounded cursor-pointer hover:bg-blue-600"
                   >
                     Join
@@ -396,16 +454,6 @@ function App() {
                 <h2 className="text-center text-xl font-bold mb-4">
                   Opponent Board
                 </h2>
-                {!bothPlayersReady && (
-                  <p className="text-center text-sm text-gray-500 mb-2">
-                    Waiting for opponent to place ships…
-                  </p>
-                )}
-                {bothPlayersReady && !isMyTurn && (
-                  <p className="text-center text-sm text-gray-500 mb-2">
-                    Waiting for opponent to fire…
-                  </p>
-                )}
                 <div className="flex gap-6">
                   <Board
                     playerBoard={opponentBoard}
@@ -418,9 +466,17 @@ function App() {
               </div>
             </>
           )}
-
         </div>
       </div>
+
+      {gameOver && (
+        <GameOverModal
+          won={gameOver.winner === playerId.current}
+          winnerLabel={gameOver.winner}
+          totalMoves={gameOver.totalMoves}
+          onNewGame={resetGame}
+        />
+      )}
     </div>
   );
 }
